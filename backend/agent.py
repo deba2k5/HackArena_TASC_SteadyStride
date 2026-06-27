@@ -177,35 +177,40 @@ def extract_text_from_pdf(file_bytes: bytes) -> str:
 # ═══════════════════════════════════════════════════════════════════════════════
 # STEP 3 — Groq Llama-4 Scout VLM (handwriting/image verification)
 # ═══════════════════════════════════════════════════════════════════════════════
-GROQ_VLM_PROMPT = """You are an enterprise payroll AI. Extract ONLY what is clearly visible in this handwritten/scanned timesheet image.
+GROQ_VLM_PROMPT = """You are an enterprise payroll AI reading a handwritten or scanned timesheet.
 
-Return JSON with these fields:
+Extract ALL visible fields and return ONLY this JSON (no other text):
 {
-  "employee_name": "full name as written, or null",
-  "emp_id": "EMP##### format only, or null",
-  "working_days": <integer 1-31 ONLY — count of actual work days, NOT year/total hours, or null>,
-  "ot_hours": <float 0-100 only, overtime hours, or 0>,
+  "employee_name": "full name or null",
+  "emp_id": "EMP##### or null",
+  "working_days": <integer 1-31 ONLY, or null>,
+  "ot_hours": <float 0-200 or 0>,
   "leave_days": <integer 0-31 or 0>,
-  "project_code": "ONLY one of: P1, P2, P3, or null — no other values",
-  "hours_per_day": <float 1-24 only, or null>,
-  "total_hours": <float 1-744 only, or null>,
+  "project_code": "P1 or P2 or P3 or null — ONLY these values",
+  "hours_per_day": <float 1-24 or null>,
+  "total_hours": <float or null>,
   "client_name": "company name or null",
-  "pay_period": "Month YYYY format or null",
+  "pay_period": "Month YYYY or null",
+  "basic_pay": <float — the basic/regular pay amount if shown, or null>,
+  "deductions": <float — any deductions shown, or 0>,
+  "net_pay": <float — the final net pay amount if explicitly shown, or null>,
   "reimbursements": [],
   "remarks": "any notes or null",
-  "confidence": <float 0.0-1.0 — your confidence in the extraction>
+  "confidence": <float 0.0-1.0>
 }
 
-CRITICAL RULES:
-- working_days MUST be between 1 and 31. If you cannot read it clearly, use null.
-- project_code MUST be exactly P1, P2, or P3. Any other value → null.
-- Do NOT invent values. If unclear, use null.
-- Return ONLY valid JSON, no explanation."""
+STRICT RULES:
+1. working_days: count of actual working days only (1-31). NEVER a year like 2026.
+2. project_code: MUST be exactly "P1", "P2", or "P3". Anything else → null.
+3. basic_pay / net_pay: read the AED amounts written on the document if visible.
+4. If a field is not clearly readable, use null.
+5. Return ONLY the JSON object."""
+
 
 def groq_vlm_extract(image_bytes: bytes, ocr_text: str = "") -> dict:
     """
     Call Groq Llama-4 Scout VLM to extract timesheet data from an image.
-    Falls back to empty dict if API key not set or call fails.
+    Returns validated dict or empty dict on failure.
     """
     if not GROQ_API_KEY or GROQ_API_KEY.startswith("gsk_placeholder"):
         print("[Groq] API key not configured — skipping VLM extraction")
@@ -215,45 +220,87 @@ def groq_vlm_extract(image_bytes: bytes, ocr_text: str = "") -> dict:
         from groq import Groq
         client = Groq(api_key=GROQ_API_KEY)
 
-        # Encode image as base64
         b64_img = base64.b64encode(image_bytes).decode("utf-8")
-
-        # Detect image MIME type
         mime = "image/jpeg"
         if image_bytes[:4] == b'\x89PNG':
             mime = "image/png"
-        elif image_bytes[:4] in (b'%PDF',):
-            # PDF — skip VLM, use OCR text only
+        elif image_bytes[:4][:4] == b'%PDF':
             return {}
 
-        messages = [
-            {
-                "role": "user",
-                "content": [
-                    {"type": "text", "text": GROQ_VLM_PROMPT + (f"\n\nOCR pre-read:\n{ocr_text[:1000]}" if ocr_text else "")},
-                    {"type": "image_url", "image_url": {"url": f"data:{mime};base64,{b64_img}"}},
-                ],
-            }
-        ]
+        prompt = GROQ_VLM_PROMPT
+        if ocr_text:
+            prompt += f"\n\nOCR pre-read (use as hint, trust your vision over OCR):\n{ocr_text[:800]}"
+
+        messages = [{
+            "role": "user",
+            "content": [
+                {"type": "text",      "text": prompt},
+                {"type": "image_url", "image_url": {"url": f"data:{mime};base64,{b64_img}"}},
+            ],
+        }]
 
         completion = client.chat.completions.create(
             model="meta-llama/llama-4-scout-17b-16e-instruct",
             messages=messages,
-            temperature=0.1,
+            temperature=0.05,
             max_completion_tokens=1024,
             top_p=1,
             stream=False,
         )
         raw = completion.choices[0].message.content or ""
-        print(f"[Groq VLM] Response: {raw[:200]}")
+        print(f"[Groq VLM] Raw: {raw[:400]}")
 
-        # Extract JSON from response
+        # Extract JSON
         json_match = re.search(r'\{.*\}', raw, re.DOTALL)
-        if json_match:
-            return json.loads(json_match.group(0))
+        if not json_match:
+            print("[Groq VLM] No JSON found in response")
+            return {}
+
+        result = json.loads(json_match.group(0))
+
+        # ── Post-extraction validation ─────────────────────────────────────────
+        # working_days: must be 1-31
+        wd = result.get("working_days")
+        if wd is not None:
+            try:
+                wd = int(str(wd).split(".")[0])
+                result["working_days"] = wd if 1 <= wd <= 31 else None
+            except (ValueError, TypeError):
+                result["working_days"] = None
+
+        # project_code: must be P1/P2/P3
+        proj = result.get("project_code")
+        if proj:
+            pm = re.search(r'\b(P[1-3])\b', str(proj), re.I)
+            result["project_code"] = pm.group(1).upper() if pm else None
+
+        # ot_hours: must be 0-200
+        ot = result.get("ot_hours")
+        if ot is not None:
+            try:
+                ot = float(ot)
+                result["ot_hours"] = ot if 0 <= ot <= 200 else 0.0
+            except (ValueError, TypeError):
+                result["ot_hours"] = 0.0
+
+        # net_pay, basic_pay, deductions: must be positive floats
+        for f in ("net_pay", "basic_pay", "deductions"):
+            val = result.get(f)
+            if val is not None:
+                try:
+                    fval = float(str(val).replace(",", "").replace("AED", "").strip())
+                    result[f] = fval if fval >= 0 else None
+                except (ValueError, TypeError):
+                    result[f] = None
+
+        print(f"[Groq VLM] Validated: days={result.get('working_days')} "
+              f"ot={result.get('ot_hours')} proj={result.get('project_code')} "
+              f"net_pay={result.get('net_pay')} conf={result.get('confidence')}")
+        return result
+
     except Exception as e:
         print(f"[Groq VLM] Error: {e}")
-    return {}
+        return {}
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # STEP 4 — BERT-based field extraction + heuristics
@@ -425,8 +472,8 @@ def parse_heuristics(text: str) -> list:
 
 def merge_extraction(bert: dict, heuristic: list, vlm: dict) -> list:
     """
-    Merge outputs from BERT, heuristics, and VLM into unified records.
-    VLM > BERT > heuristic for field priority.
+    Merge BERT, heuristics, and VLM into unified records.
+    Priority: portal structured fields > VLM vision > BERT text > heuristic fallback.
     """
     base = heuristic[0] if heuristic else {}
 
@@ -436,65 +483,53 @@ def merge_extraction(bert: dict, heuristic: list, vlm: dict) -> list:
         if not base.get(field) and bert.get(field):
             base[field] = bert[field]
 
-    # VLM overrides all (highest confidence) — EXCEPT when heuristic already
-    # has valid structured portal values for critical fields
     if vlm:
-        # Fields where portal context (heuristic) takes priority if already set
-        portal_protected = {"working_days", "emp_id", "project_code"}
+        # Portal-supplied fields (from heuristic structured text) take priority
+        # for identity/key fields — VLM fills gaps only
+        portal_protected = {"emp_id", "working_days", "project_code"}
+
         for field in ("employee_name","emp_id","working_days","ot_hours","leave_days",
                       "project_code","hours_per_day","total_hours","client_name",
-                      "pay_period","reimbursements","remarks"):
+                      "pay_period","reimbursements","remarks",
+                      "net_pay","basic_pay","deductions"):
             vlm_val = vlm.get(field)
             if vlm_val in (None, "", [], {}):
                 continue
-            # If heuristic already has a valid value for a protected field, keep it
+            # Portal values protect identity/time fields
             if field in portal_protected and base.get(field) not in (None, "", [], {}):
                 continue
-            # Extra validation on VLM numeric fields
-            if field == "working_days":
-                try:
-                    v = int(str(vlm_val).split(".")[0])
-                    if not (1 <= v <= 31):
-                        continue  # discard out-of-range VLM value
-                    vlm_val = v
-                except (ValueError, TypeError):
-                    continue
-            if field == "project_code":
-                pm = re.search(r'\b(P[1-3])\b', str(vlm_val), re.I)
-                vlm_val = pm.group(1).upper() if pm else None
-                if not vlm_val:
-                    continue
             base[field] = vlm_val
-        # VLM confidence
+
         if vlm.get("confidence"):
             base["vlm_confidence"] = float(vlm["confidence"])
 
-    # Coerce numeric types and validate ranges
+    # Coerce and validate numeric types
     for f in ("working_days", "leave_days"):
         if base.get(f):
             try:
                 v = int(str(base[f]).split(".")[0])
-                # Reject impossible values (e.g. BERT extracting the year 2026 as working_days)
                 base[f] = v if 1 <= v <= 31 else None
             except (ValueError, TypeError):
                 base[f] = None
-    for f in ("ot_hours","hours_per_day","total_hours"):
-        if base.get(f):
-            try: base[f] = float(base[f])
-            except: pass
 
-    # If we have total_hours but no working_days, derive from hours
+    for f in ("ot_hours","hours_per_day","total_hours","net_pay","basic_pay","deductions"):
+        if base.get(f) is not None:
+            try:
+                base[f] = float(str(base[f]).replace(",","").replace("AED","").strip())
+            except (ValueError, TypeError):
+                base[f] = None
+
+    # Derive working_days from total_hours if missing
     if base.get("total_hours") and not base.get("working_days"):
         base["working_days"] = max(1, round(base["total_hours"] / STANDARD_HOURS))
 
-    # If we have hours_per_day × working_days, fill total
     if base.get("hours_per_day") and base.get("working_days") and not base.get("total_hours"):
         base["total_hours"] = round(base["hours_per_day"] * base["working_days"], 2)
 
     if not base:
         return []
     if heuristic and len(heuristic) > 1:
-        return heuristic  # bulk list case — return all
+        return heuristic
     return [base]
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -571,12 +606,8 @@ def match_employees(extracted_records: list, client_code: str = None) -> list:
 
 def calculate_project_pay(emp_record: dict, rec: dict) -> dict:
     """
-    Office Regulation Act:
-      - Base: 500 AED / hour × STANDARD_HOURS_PER_DAY = 4,000 AED/day
-      - OT:   500 × 1.5 = 750 AED/hour
-      - Project caps enforced (P1=24k/6days, P2=20k/5days, P3=16k/4days)
-      - If employee has a TASC salary record, use that as the payroll basis.
-      - Project pay is the BILLABLE amount to the client (separate from salary).
+    Office Regulation Act billing: 500 AED/hr × 8 hrs/day.
+    If the source document (handwriting) has explicit net_pay, use it directly.
     """
     working_days = int(rec.get("working_days") or 0)
     ot_hours     = float(rec.get("ot_hours") or 0.0)
@@ -588,11 +619,9 @@ def calculate_project_pay(emp_record: dict, rec: dict) -> dict:
         working_days = max(1, round(hours_worked / STANDARD_HOURS))
 
     # Regular hours from working days
-    regular_hours = working_days * STANDARD_HOURS if working_days else hours_worked
-
-    # Base billable
-    regular_pay = regular_hours * BASE_HOURLY_RATE
-    ot_pay      = ot_hours * BASE_HOURLY_RATE * OT_MULTIPLIER
+    regular_hours  = working_days * STANDARD_HOURS if working_days else hours_worked
+    regular_pay    = regular_hours * BASE_HOURLY_RATE
+    ot_pay         = ot_hours * BASE_HOURLY_RATE * OT_MULTIPLIER
     total_billable = regular_pay + ot_pay
 
     # Project cap enforcement
@@ -609,19 +638,26 @@ def calculate_project_pay(emp_record: dict, rec: dict) -> dict:
                              f"({project_info['name']}) max of {max_days} days.")
         if total_billable > max_pay:
             cap_exceeded   = True
-            cap_violation  = (f"Billable amount AED {total_billable:,.2f} exceeds project {project_code} "
-                              f"({project_info['name']}) cap of AED {max_pay:,.2f}.")
-            total_billable = max_pay   # hard cap
+            cap_violation  = (f"Billable AED {total_billable:,.2f} exceeds {project_code} "
+                              f"cap AED {max_pay:,.2f}.")
+            total_billable = max_pay
 
-    # Always bill at Office Regulation rate: 500 AED/hr × 8 hrs/day
-    # TASC salary components are NOT used for project billing amounts.
-    basic = housing = transport = food = phone = gross = 0.0
-    ot_rate    = BASE_HOURLY_RATE * OT_MULTIPLIER
-    ot_amount  = round(ot_hours * ot_rate, 2)
-    deductions = 0.0
-    net_pay    = round(total_billable, 2)
+    # ── Use VLM-extracted net_pay if document states it explicitly ──────────
+    # The handwritten doc may show explicit net pay — trust it over calculation
+    doc_net_pay = rec.get("net_pay")
+    if doc_net_pay and float(doc_net_pay) > 0:
+        net_pay = round(float(doc_net_pay), 2)
+        # Still apply project cap if applicable
+        if project_info and net_pay > project_info["max_pay"]:
+            net_pay = project_info["max_pay"]
+            cap_exceeded = True
+    else:
+        net_pay = round(total_billable, 2)
 
-    emp = emp_record  # kept for IBAN lookup only
+    ot_rate   = BASE_HOURLY_RATE * OT_MULTIPLIER
+    ot_amount = round(ot_hours * ot_rate, 2)
+    emp       = emp_record
+
     return {
         "regular_hours":    round(regular_hours, 2),
         "ot_hours":         ot_hours,
@@ -634,17 +670,16 @@ def calculate_project_pay(emp_record: dict, rec: dict) -> dict:
         "project_max_days": project_info["max_days"] if project_info else None,
         "cap_exceeded":     cap_exceeded,
         "cap_violation":    cap_violation,
-        # billing line (no TASC salary split — pure hourly rate)
-        "basic":        round(regular_pay, 2),
-        "housing":      0.0,
-        "transport":    0.0,
-        "food":         0.0,
-        "phone":        0.0,
-        "gross":        round(total_billable, 2),
-        "ot_amount":    ot_amount,
-        "deductions":   deductions,
-        "net_pay":      net_pay,
-        "iban":         emp.get("iban", "") if emp else "",
+        "basic":            round(regular_pay, 2),
+        "housing":          0.0,
+        "transport":        0.0,
+        "food":             0.0,
+        "phone":            0.0,
+        "gross":            round(total_billable, 2),
+        "ot_amount":        ot_amount,
+        "deductions":       round(float(rec.get("deductions") or 0), 2),
+        "net_pay":          net_pay,
+        "iban":             emp.get("iban", "") if emp else "",
     }
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1074,15 +1109,23 @@ def extract_timesheet(text_content: str = None, file_name: str = None,
 
     # ── Confidence adjustment for handwriting ────────────────────────────────
     if is_handwritten:
+        vlm_conf = float(vlm_result.get("confidence", 0)) if vlm_result else 0.0
         for r in matched:
-            # VLM boosts confidence for handwriting, OCR reduces slightly
-            vlm_conf = vlm_result.get("confidence", 0) if vlm_result else 0
-            base_conf = r.get("confidence", 0.7)
-            if vlm_conf > 0.5:
-                r["confidence"] = round(min(1.0, base_conf * 0.9 + vlm_conf * 0.1), 2)
+            base_conf = float(r.get("confidence", 0.7))
+            if r.get("match_status") != "matched":
+                # Unmatched employees → cap confidence low
+                r["confidence"] = round(base_conf * 0.5, 2)
+            elif vlm_conf >= 0.85:
+                # VLM is highly confident → boost to reflect that
+                r["confidence"] = round(min(1.0, 0.90 + vlm_conf * 0.05), 2)
+            elif vlm_conf >= 0.60:
+                # Moderate VLM confidence → blend
+                r["confidence"] = round(min(0.95, base_conf * 0.7 + vlm_conf * 0.3), 2)
             else:
+                # Low VLM confidence → reduce slightly
                 r["confidence"] = round(base_conf * 0.82, 2)
             r["is_handwritten"] = True
+            r["vlm_confidence"] = vlm_conf
 
     overall = round(sum(r.get("confidence",0) for r in matched)/max(len(matched),1), 2) if matched else 0.0
 
