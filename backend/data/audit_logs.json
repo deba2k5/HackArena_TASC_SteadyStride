@@ -1,14 +1,58 @@
 [
   {
+    "id": "075bdbd5-be01-4ca7-94a8-3213eb35cfaf",
     "actor": "system",
     "action": "database_seed",
     "target": "all",
-    "at": "2026-06-27T16:09:58.462460",
+    "at": "2026-06-27T15:01:39.906133",
     "meta": {
       "customers_seeded": 10,
-      "employees_seeded": 200
+      "employees_seeded": 200,
+      "payroll_seeded": 200
     },
-    "_id": "3bd84ca1-6dd9-4a00-9fd4-e009bb537c52",
-    "id": "3bd84ca1-6dd9-4a00-9fd4-e009bb537c52"
+    "_id": "e783e676-4f7c-4896-9fa1-9d67da5827ac"
+  },
+  {
+    "actor": "admin@gmail.com",
+    "action": "auth.signin",
+    "id": "rcp7talj3vmqwhoht3",
+    "at": "2026-06-27T15:02:44.775Z",
+    "_id": "e7dfae9e-3890-4527-8176-c6dd812f33a7"
+  },
+  {
+    "actor": "admin@gmail.com",
+    "action": "session.clock_in",
+    "target": "1p5x0lyr4jsmqwhq2ht",
+    "id": "kmthjwn3dzmqwhq2nc",
+    "at": "2026-06-27T15:03:58.440Z",
+    "_id": "47365bbb-27c7-469a-8fc3-012520605198"
+  },
+  {
+    "actor": "client_portal",
+    "action": "timesheet_ingested",
+    "target": "718c5a91-7835-4a5e-8aa8-1b5e4a05b80f",
+    "at": "2026-06-27T15:21:28.407501",
+    "meta": {
+      "client_code": "CL001",
+      "status": "pending_review",
+      "overall_confidence": 0.0,
+      "is_touchless": false
+    },
+    "_id": "186e2761-9dc3-4384-98dd-713562ce02eb",
+    "id": "186e2761-9dc3-4384-98dd-713562ce02eb"
+  },
+  {
+    "actor": "admin@gmail.com",
+    "action": "auth.signin",
+    "id": "0ugv67xxqrpgmqwid5ui",
+    "at": "2026-06-27T15:21:55.674Z",
+    "_id": "a91a2aa9-f31d-4b24-a4aa-2614fce9371a"
+  },
+  {
+    "actor": "admin@gmail.com",
+    "action": "auth.signin",
+    "id": "137kv6zd1z7mmqwl1pu3",
+    "at": "2026-06-27T16:37:00.555Z",
+    "_id": "35d486dc-6509-415d-8711-16a17f9ca764"
   }
 ]

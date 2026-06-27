@@ -9,7 +9,8 @@
     "input_channels": [
       "email",
       "portal",
-      "timesheet_app"
+      "excel",
+      "handwriting"
     ],
     "dispatch_rule": "spend_ascending",
     "validation_profile": {
@@ -18,8 +19,8 @@
       "max_salary_variance_pct": 5.0,
       "require_signature": true
     },
-    "_id": "ca5e40c0-bd3d-4bed-a9e8-d04c9cd83fa3",
-    "id": "ca5e40c0-bd3d-4bed-a9e8-d04c9cd83fa3"
+    "_id": "9bc6d221-3294-483c-ab42-2a1549ded2e2",
+    "id": "9bc6d221-3294-483c-ab42-2a1549ded2e2"
   },
   {
     "client_code": "CL002",
@@ -31,7 +32,8 @@
     "input_channels": [
       "email",
       "portal",
-      "timesheet_app"
+      "excel",
+      "handwriting"
     ],
     "dispatch_rule": "spend_descending",
     "validation_profile": {
@@ -40,8 +42,8 @@
       "max_salary_variance_pct": 5.0,
       "require_signature": true
     },
-    "_id": "7d697078-8d29-4277-978f-3a897e91dce9",
-    "id": "7d697078-8d29-4277-978f-3a897e91dce9"
+    "_id": "fadd2a5c-72b2-4be9-968c-d32b0b86b639",
+    "id": "fadd2a5c-72b2-4be9-968c-d32b0b86b639"
   },
   {
     "client_code": "CL003",
@@ -53,7 +55,8 @@
     "input_channels": [
       "email",
       "portal",
-      "timesheet_app"
+      "excel",
+      "handwriting"
     ],
     "dispatch_rule": "spend_ascending",
     "validation_profile": {
@@ -62,8 +65,8 @@
       "max_salary_variance_pct": 5.0,
       "require_signature": false
     },
-    "_id": "847d2bc5-f92b-4468-aebc-34252beb72ca",
-    "id": "847d2bc5-f92b-4468-aebc-34252beb72ca"
+    "_id": "90591b59-68e8-4f33-8894-b5328b9e4d63",
+    "id": "90591b59-68e8-4f33-8894-b5328b9e4d63"
   },
   {
     "client_code": "CL004",
@@ -75,7 +78,8 @@
     "input_channels": [
       "email",
       "portal",
-      "timesheet_app"
+      "excel",
+      "handwriting"
     ],
     "dispatch_rule": "spend_descending",
     "validation_profile": {
@@ -84,8 +88,8 @@
       "max_salary_variance_pct": 5.0,
       "require_signature": true
     },
-    "_id": "057c00b8-496a-4520-94fd-48872c29ce73",
-    "id": "057c00b8-496a-4520-94fd-48872c29ce73"
+    "_id": "1e520769-21db-4b5d-a3e3-b0756de46bdd",
+    "id": "1e520769-21db-4b5d-a3e3-b0756de46bdd"
   },
   {
     "client_code": "CL005",
@@ -97,7 +101,8 @@
     "input_channels": [
       "email",
       "portal",
-      "timesheet_app"
+      "excel",
+      "handwriting"
     ],
     "dispatch_rule": "spend_ascending",
     "validation_profile": {
@@ -106,8 +111,8 @@
       "max_salary_variance_pct": 5.0,
       "require_signature": false
     },
-    "_id": "692ae28d-a748-480b-bc4a-2e5138e03eae",
-    "id": "692ae28d-a748-480b-bc4a-2e5138e03eae"
+    "_id": "2ba5a00b-0c7d-44dd-a96c-d13fd7af7fd9",
+    "id": "2ba5a00b-0c7d-44dd-a96c-d13fd7af7fd9"
   },
   {
     "client_code": "CL006",
@@ -119,7 +124,8 @@
     "input_channels": [
       "email",
       "portal",
-      "timesheet_app"
+      "excel",
+      "handwriting"
     ],
     "dispatch_rule": "spend_descending",
     "validation_profile": {
@@ -128,8 +134,8 @@
       "max_salary_variance_pct": 5.0,
       "require_signature": false
     },
-    "_id": "55a8a779-08f6-46c3-8f8c-fea75e49cd16",
-    "id": "55a8a779-08f6-46c3-8f8c-fea75e49cd16"
+    "_id": "0605d564-1a7c-4511-ac3e-9c63d76c1896",
+    "id": "0605d564-1a7c-4511-ac3e-9c63d76c1896"
   },
   {
     "client_code": "CL007",
@@ -141,17 +147,18 @@
     "input_channels": [
       "email",
       "portal",
-      "timesheet_app"
+      "excel",
+      "handwriting"
     ],
-    "dispatch_rule": "spend_descending",
+    "dispatch_rule": "spend_ascending",
     "validation_profile": {
       "max_ot_hours_limit": 15,
       "allow_variance": true,
       "max_salary_variance_pct": 5.0,
       "require_signature": false
     },
-    "_id": "9572e963-87bb-436c-b02e-bfe73d430098",
-    "id": "9572e963-87bb-436c-b02e-bfe73d430098"
+    "_id": "4d8693e4-b7b0-4e38-a9a1-38b24d46c01c",
+    "id": "4d8693e4-b7b0-4e38-a9a1-38b24d46c01c"
   },
   {
     "client_code": "CL008",
@@ -163,7 +170,8 @@
     "input_channels": [
       "email",
       "portal",
-      "timesheet_app"
+      "excel",
+      "handwriting"
     ],
     "dispatch_rule": "spend_descending",
     "validation_profile": {
@@ -172,8 +180,8 @@
       "max_salary_variance_pct": 5.0,
       "require_signature": false
     },
-    "_id": "f95d55aa-8d76-4ad8-a36b-d4b87d32cd70",
-    "id": "f95d55aa-8d76-4ad8-a36b-d4b87d32cd70"
+    "_id": "c813ecb5-6557-4d7b-bdf3-fea2e70b8543",
+    "id": "c813ecb5-6557-4d7b-bdf3-fea2e70b8543"
   },
   {
     "client_code": "CL009",
@@ -185,17 +193,18 @@
     "input_channels": [
       "email",
       "portal",
-      "timesheet_app"
+      "excel",
+      "handwriting"
     ],
-    "dispatch_rule": "spend_descending",
+    "dispatch_rule": "spend_ascending",
     "validation_profile": {
       "max_ot_hours_limit": 15,
       "allow_variance": true,
       "max_salary_variance_pct": 5.0,
       "require_signature": false
     },
-    "_id": "c9f5cc64-e0e2-4c8d-8dde-9fa794956617",
-    "id": "c9f5cc64-e0e2-4c8d-8dde-9fa794956617"
+    "_id": "5795a84c-6a9b-4f2d-95fb-e6da382b64df",
+    "id": "5795a84c-6a9b-4f2d-95fb-e6da382b64df"
   },
   {
     "client_code": "CL010",
@@ -207,7 +216,8 @@
     "input_channels": [
       "email",
       "portal",
-      "timesheet_app"
+      "excel",
+      "handwriting"
     ],
     "dispatch_rule": "spend_descending",
     "validation_profile": {
@@ -216,7 +226,7 @@
       "max_salary_variance_pct": 5.0,
       "require_signature": false
     },
-    "_id": "94621f5e-5353-4827-8c03-05af29827d27",
-    "id": "94621f5e-5353-4827-8c03-05af29827d27"
+    "_id": "2984d3dc-a369-4045-b060-1e1a8a13c217",
+    "id": "2984d3dc-a369-4045-b060-1e1a8a13c217"
   }
 ]

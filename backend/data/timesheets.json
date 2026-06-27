@@ -1,1 +1,28 @@
-[]
+[
+  {
+    "id": "718c5a91-7835-4a5e-8aa8-1b5e4a05b80f",
+    "client_code": "CL001",
+    "client_name": "Emirates Steel Industries LLC",
+    "pay_period": "June 2026",
+    "input_type": "email",
+    "file_name": "Deposit Refund Master-2026.xlsx",
+    "status": "pending_review",
+    "uploaded_at": "2026-06-27T15:21:28.402739",
+    "uploaded_by": "client_portal",
+    "extracted_data": {
+      "records": [],
+      "overall_confidence": 0.0,
+      "meta": {
+        "has_signature": false,
+        "has_stamp": false,
+        "is_handwritten": false,
+        "raw_text_extracted": "[Extracted from Deposit Refund Master-2026.xlsx]"
+      }
+    },
+    "exceptions": [
+      "Missing required client signature."
+    ],
+    "is_touchless": false,
+    "_id": "efcdc99b-f2b9-4ec9-b315-b64c28015ab4"
+  }
+]

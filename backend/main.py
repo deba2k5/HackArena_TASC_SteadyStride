@@ -131,9 +131,58 @@ def upsert_customer(cust: CustomerConfig, x_user_email: Optional[str] = Header(N
 # ============ EMPLOYEE ENDPOINTS ============
 
 @app.get("/api/employees")
-def get_employees(client_code: Optional[str] = None):
-    query = {"client_code": client_code} if client_code else {}
+def get_employees(client_code: Optional[str] = None, email: Optional[str] = None):
+    query = {}
+    if client_code:
+        query["client_code"] = client_code
+    if email:
+        query["email"] = email.lower()
     return get_collection("employees").find(query)
+
+class LinkEmailRequest(BaseModel):
+    portal_email: str
+
+@app.post("/api/employees/{emp_id}/link-email")
+def link_portal_email(emp_id: str, req: LinkEmailRequest, x_user_email: Optional[str] = Header(None)):
+    """Link a Firebase portal email to an employee record (adds a duplicate entry with the portal email)."""
+    import uuid
+    employees_col = get_collection("employees")
+    
+    # Find the canonical employee record
+    emp = employees_col.find_one({"emp_id": emp_id, "is_demo_account": {"$ne": True}})
+    if not emp:
+        # Fallback — find any record with this emp_id
+        emp = employees_col.find_one({"emp_id": emp_id})
+    if not emp:
+        raise HTTPException(status_code=404, detail=f"Employee {emp_id} not found")
+    
+    portal_email = req.portal_email.strip().lower()
+    
+    # Check if this portal email is already linked
+    existing = employees_col.find_one({"email": portal_email})
+    if existing:
+        if existing.get("emp_id") == emp_id:
+            return {"status": "already_linked", "emp_id": emp_id, "email": portal_email}
+        # Update the existing entry to point to the new emp_id
+        employees_col.delete_many({"email": portal_email})
+    
+    # Create a new entry with the portal email mapped to this employee
+    new_entry = dict(emp)
+    new_entry["_id"] = str(uuid.uuid4())
+    new_entry["id"] = str(uuid.uuid4())
+    new_entry["email"] = portal_email
+    new_entry["is_demo_account"] = True  # marks it as a portal alias
+    
+    employees_col.insert_one(new_entry)
+    
+    log_audit(
+        actor=x_user_email or "admin",
+        action="employee_email_linked",
+        target=emp_id,
+        meta={"portal_email": portal_email, "employee": emp.get("full_name")}
+    )
+    
+    return {"status": "linked", "emp_id": emp_id, "portal_email": portal_email, "employee_name": emp.get("full_name")}
 
 # ============ TIMESHEET INGESTION & EXTRCTION ============
 
@@ -530,7 +579,27 @@ def list_profiles():
 
 @app.get("/api/profiles/{email}")
 def get_profile(email: str):
-    emp = get_collection("employees").find_one({"email": email})
+    # Special demo accounts — map to real employees in the TASC database
+    DEMO_EMAIL_MAP = {
+        "employee@gmail.com": "EMP10001",  # Carlos Smith, Emirates Steel
+        "admin@gmail.com": None,           # admin — no employee record
+    }
+    # Check if it's a demo account with an employee mapping
+    demo_emp_id = DEMO_EMAIL_MAP.get(email.lower())
+    if demo_emp_id:
+        emp = get_collection("employees").find_one({"emp_id": demo_emp_id})
+        if emp:
+            return {
+                "employeeId": emp["emp_id"],
+                "fullName": emp["full_name"],
+                "email": email,  # keep the login email
+                "mobile": "",
+                "department": emp["department"],
+                "employeeType": "permanent",
+                "active": emp["status"] == "Active"
+            }
+    # Normal lookup by email in employee master
+    emp = get_collection("employees").find_one({"email": email.lower()})
     if emp:
         return {
             "employeeId": emp["emp_id"],
@@ -542,11 +611,11 @@ def get_profile(email: str):
             "active": emp["status"] == "Active"
         }
     return {
-        "employeeId": "EMP001",
-        "fullName": "Debangshu",
+        "employeeId": email.split("@")[0].upper(),
+        "fullName": email.split("@")[0],
         "email": email,
         "mobile": "",
-        "department": "Administration",
+        "department": "—",
         "employeeType": "permanent",
         "active": True
     }
@@ -556,11 +625,51 @@ def upsert_profile(data: dict):
     return data
 
 @app.get("/api/sessions")
-def list_sessions():
-    return []
+def list_sessions(email: Optional[str] = None, status: Optional[str] = None):
+    sessions_col = get_collection("sessions")
+    query = {}
+    if email:
+        query["email"] = email
+    if status:
+        query["status"] = status
+    return sessions_col.find(query, sort=[("clockIn", -1)])
 
 @app.post("/api/sessions")
 def create_session(data: dict):
+    sessions_col = get_collection("sessions")
+    import uuid
+    if "id" not in data or not data["id"]:
+        data["id"] = str(uuid.uuid4())
+    sessions_col.insert_one(data)
+    return data
+
+@app.patch("/api/sessions/{id}")
+def patch_session(id: str, patch: dict):
+    sessions_col = get_collection("sessions")
+    s = sessions_col.find_one({"id": id})
+    if not s:
+        raise HTTPException(status_code=404, detail="Session not found")
+    sessions_col.update_one({"id": id}, {"$set": patch})
+    s.update(patch)
+    return s
+
+@app.get("/api/sessions/{id}")
+def get_session(id: str):
+    sessions_col = get_collection("sessions")
+    s = sessions_col.find_one({"id": id})
+    if not s:
+        raise HTTPException(status_code=404, detail="Session not found")
+    return s
+
+@app.post("/api/audit")
+def create_audit_log(data: dict):
+    audit_col = get_collection("audit_logs")
+    import uuid
+    if "id" not in data or not data["id"]:
+        data["id"] = str(uuid.uuid4())
+    if "at" not in data or not data["at"]:
+        data["at"] = datetime.utcnow().isoformat()
+    audit_col.insert_one(data)
     return data
 
 if __name__ == "__main__":

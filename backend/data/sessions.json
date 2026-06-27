@@ -1,0 +1,610 @@
+[
+  {
+    "id": "1p5x0lyr4jsmqwhq2ht",
+    "employeeId": "EMP001",
+    "email": "admin@gmail.com",
+    "fullName": "Debangshu",
+    "date": "2026-06-27",
+    "clockIn": "2026-06-27T15:03:58.241Z",
+    "breaks": [],
+    "locations": [
+      {
+        "lat": 28.545178213835715,
+        "lng": 77.27319638343725,
+        "accuracy": 106,
+        "at": "2026-06-27T15:04:04.360Z",
+        "locationName": "Delhi, India",
+        "outsideGeofence": false
+      },
+      {
+        "lat": 28.545178213835715,
+        "lng": 77.27319638343725,
+        "accuracy": 106,
+        "at": "2026-06-27T15:04:05.049Z",
+        "locationName": "Delhi, India",
+        "outsideGeofence": false
+      },
+      {
+        "lat": 28.545178213835715,
+        "lng": 77.27319638343725,
+        "accuracy": 106,
+        "at": "2026-06-27T15:04:05.430Z",
+        "locationName": "Delhi, India",
+        "outsideGeofence": false
+      },
+      {
+        "lat": 28.545178213835715,
+        "lng": 77.27319638343725,
+        "accuracy": 106,
+        "at": "2026-06-27T15:04:05.760Z",
+        "locationName": "Delhi, India",
+        "outsideGeofence": false
+      },
+      {
+        "lat": 28.545178213835715,
+        "lng": 77.27319638343725,
+        "accuracy": 106,
+        "at": "2026-06-27T15:04:06.177Z",
+        "locationName": "Delhi, India",
+        "outsideGeofence": false
+      },
+      {
+        "lat": 28.545178213835715,
+        "lng": 77.27319638343725,
+        "accuracy": 106,
+        "at": "2026-06-27T15:04:06.466Z",
+        "locationName": "Delhi, India",
+        "outsideGeofence": false
+      },
+      {
+        "lat": 28.545178213835715,
+        "lng": 77.27319638343725,
+        "accuracy": 106,
+        "at": "2026-06-27T15:04:06.852Z",
+        "locationName": "Delhi, India",
+        "outsideGeofence": false
+      },
+      {
+        "lat": 28.545178213835715,
+        "lng": 77.27319638343725,
+        "accuracy": 106,
+        "at": "2026-06-27T15:04:07.279Z",
+        "locationName": "Delhi, India",
+        "outsideGeofence": false
+      },
+      {
+        "lat": 28.545178213835715,
+        "lng": 77.27319638343725,
+        "accuracy": 106,
+        "at": "2026-06-27T15:04:07.665Z",
+        "locationName": "Delhi, India",
+        "outsideGeofence": false
+      },
+      {
+        "lat": 28.545178213835715,
+        "lng": 77.27319638343725,
+        "accuracy": 106,
+        "at": "2026-06-27T15:04:07.701Z",
+        "locationName": "Delhi, India",
+        "outsideGeofence": false
+      },
+      {
+        "lat": 28.545178213835715,
+        "lng": 77.27319638343725,
+        "accuracy": 106,
+        "at": "2026-06-27T15:04:07.990Z",
+        "locationName": "Delhi, India",
+        "outsideGeofence": false
+      },
+      {
+        "lat": 28.545178213835715,
+        "lng": 77.27319638343725,
+        "accuracy": 106,
+        "at": "2026-06-27T15:04:08.412Z",
+        "locationName": "Delhi, India",
+        "outsideGeofence": false
+      },
+      {
+        "lat": 28.545178213835715,
+        "lng": 77.27319638343725,
+        "accuracy": 106,
+        "at": "2026-06-27T15:04:08.691Z",
+        "locationName": "Delhi, India",
+        "outsideGeofence": false
+      },
+      {
+        "lat": 28.545178213835715,
+        "lng": 77.27319638343725,
+        "accuracy": 106,
+        "at": "2026-06-27T15:04:09.108Z",
+        "locationName": "Delhi, India",
+        "outsideGeofence": false
+      },
+      {
+        "lat": 28.545178213835715,
+        "lng": 77.27319638343725,
+        "accuracy": 106,
+        "at": "2026-06-27T15:04:09.143Z",
+        "locationName": "Delhi, India",
+        "outsideGeofence": false
+      },
+      {
+        "lat": 28.545178213835715,
+        "lng": 77.27319638343725,
+        "accuracy": 106,
+        "at": "2026-06-27T15:04:09.479Z",
+        "locationName": "Delhi, India",
+        "outsideGeofence": false
+      },
+      {
+        "lat": 28.545178213835715,
+        "lng": 77.27319638343725,
+        "accuracy": 106,
+        "at": "2026-06-27T15:04:11.404Z",
+        "locationName": null,
+        "outsideGeofence": false
+      },
+      {
+        "lat": 28.545178213835715,
+        "lng": 77.27319638343725,
+        "accuracy": 106,
+        "at": "2026-06-27T15:04:13.391Z",
+        "locationName": null,
+        "outsideGeofence": false
+      },
+      {
+        "lat": 28.545178213835715,
+        "lng": 77.27319638343725,
+        "accuracy": 106,
+        "at": "2026-06-27T15:04:17.413Z",
+        "locationName": null,
+        "outsideGeofence": false
+      },
+      {
+        "lat": 28.545122145000544,
+        "lng": 77.2731781292475,
+        "accuracy": 98,
+        "at": "2026-06-27T15:04:19.397Z",
+        "locationName": null,
+        "outsideGeofence": false
+      },
+      {
+        "lat": 28.545122145000544,
+        "lng": 77.2731781292475,
+        "accuracy": 98,
+        "at": "2026-06-27T15:04:21.427Z",
+        "locationName": null,
+        "outsideGeofence": false
+      },
+      {
+        "lat": 28.545122145000544,
+        "lng": 77.2731781292475,
+        "accuracy": 98,
+        "at": "2026-06-27T15:04:23.497Z",
+        "locationName": null,
+        "outsideGeofence": false
+      },
+      {
+        "lat": 28.545122145000544,
+        "lng": 77.2731781292475,
+        "accuracy": 98,
+        "at": "2026-06-27T15:04:25.402Z",
+        "locationName": null,
+        "outsideGeofence": false
+      },
+      {
+        "lat": 28.545122145000544,
+        "lng": 77.2731781292475,
+        "accuracy": 98,
+        "at": "2026-06-27T15:04:27.403Z",
+        "locationName": null,
+        "outsideGeofence": false
+      },
+      {
+        "lat": 28.545122145000544,
+        "lng": 77.2731781292475,
+        "accuracy": 98,
+        "at": "2026-06-27T15:04:29.395Z",
+        "locationName": null,
+        "outsideGeofence": false
+      },
+      {
+        "lat": 28.545122145000544,
+        "lng": 77.2731781292475,
+        "accuracy": 98,
+        "at": "2026-06-27T15:04:33.539Z",
+        "locationName": null,
+        "outsideGeofence": false
+      },
+      {
+        "lat": 28.545242520464637,
+        "lng": 77.27318610511398,
+        "accuracy": 99,
+        "at": "2026-06-27T15:04:35.417Z",
+        "locationName": null,
+        "outsideGeofence": false
+      },
+      {
+        "lat": 28.545242520464637,
+        "lng": 77.27318610511398,
+        "accuracy": 99,
+        "at": "2026-06-27T15:04:37.394Z",
+        "locationName": null,
+        "outsideGeofence": false
+      },
+      {
+        "lat": 28.545242520464637,
+        "lng": 77.27318610511398,
+        "accuracy": 99,
+        "at": "2026-06-27T15:04:39.391Z",
+        "locationName": null,
+        "outsideGeofence": false
+      },
+      {
+        "lat": 28.545242520464637,
+        "lng": 77.27318610511398,
+        "accuracy": 99,
+        "at": "2026-06-27T15:04:41.402Z",
+        "locationName": null,
+        "outsideGeofence": false
+      },
+      {
+        "lat": 28.545242520464637,
+        "lng": 77.27318610511398,
+        "accuracy": 99,
+        "at": "2026-06-27T15:04:43.401Z",
+        "locationName": null,
+        "outsideGeofence": false
+      },
+      {
+        "lat": 28.545242520464637,
+        "lng": 77.27318610511398,
+        "accuracy": 99,
+        "at": "2026-06-27T15:04:45.492Z",
+        "locationName": null,
+        "outsideGeofence": false
+      },
+      {
+        "lat": 28.545242520464637,
+        "lng": 77.27318610511398,
+        "accuracy": 99,
+        "at": "2026-06-27T15:04:47.443Z",
+        "locationName": null,
+        "outsideGeofence": false
+      },
+      {
+        "lat": 28.545242520464637,
+        "lng": 77.27318610511398,
+        "accuracy": 99,
+        "at": "2026-06-27T15:04:51.443Z",
+        "locationName": null,
+        "outsideGeofence": false
+      },
+      {
+        "lat": 28.545173039301346,
+        "lng": 77.27315789199433,
+        "accuracy": 115,
+        "at": "2026-06-27T15:04:53.447Z",
+        "locationName": null,
+        "outsideGeofence": false
+      },
+      {
+        "lat": 28.545173039301346,
+        "lng": 77.27315789199433,
+        "accuracy": 115,
+        "at": "2026-06-27T15:04:56.299Z",
+        "locationName": null,
+        "outsideGeofence": false
+      },
+      {
+        "lat": 28.545173039301346,
+        "lng": 77.27315789199433,
+        "accuracy": 115,
+        "at": "2026-06-27T15:04:57.450Z",
+        "locationName": null,
+        "outsideGeofence": false
+      },
+      {
+        "lat": 28.545173039301346,
+        "lng": 77.27315789199433,
+        "accuracy": 115,
+        "at": "2026-06-27T15:04:59.405Z",
+        "locationName": null,
+        "outsideGeofence": false
+      },
+      {
+        "lat": 28.545173039301346,
+        "lng": 77.27315789199433,
+        "accuracy": 115,
+        "at": "2026-06-27T15:05:01.396Z",
+        "locationName": null,
+        "outsideGeofence": false
+      },
+      {
+        "lat": 28.545173039301346,
+        "lng": 77.27315789199433,
+        "accuracy": 115,
+        "at": "2026-06-27T15:05:03.505Z",
+        "locationName": null,
+        "outsideGeofence": false
+      },
+      {
+        "lat": 28.545173039301346,
+        "lng": 77.27315789199433,
+        "accuracy": 115,
+        "at": "2026-06-27T15:05:05.397Z",
+        "locationName": null,
+        "outsideGeofence": false
+      },
+      {
+        "lat": 28.545361296794283,
+        "lng": 77.27325797584469,
+        "accuracy": 90,
+        "at": "2026-06-27T15:05:09.398Z",
+        "locationName": null,
+        "outsideGeofence": false
+      },
+      {
+        "lat": 28.545361296794283,
+        "lng": 77.27325797584469,
+        "accuracy": 90,
+        "at": "2026-06-27T15:05:11.405Z",
+        "locationName": null,
+        "outsideGeofence": false
+      },
+      {
+        "lat": 28.545361296794283,
+        "lng": 77.27325797584469,
+        "accuracy": 90,
+        "at": "2026-06-27T15:05:13.491Z",
+        "locationName": null,
+        "outsideGeofence": false
+      },
+      {
+        "lat": 28.545361296794283,
+        "lng": 77.27325797584469,
+        "accuracy": 90,
+        "at": "2026-06-27T15:05:15.499Z",
+        "locationName": null,
+        "outsideGeofence": false
+      },
+      {
+        "lat": 28.545361296794283,
+        "lng": 77.27325797584469,
+        "accuracy": 90,
+        "at": "2026-06-27T15:05:17.439Z",
+        "locationName": null,
+        "outsideGeofence": false
+      },
+      {
+        "lat": 28.545361296794283,
+        "lng": 77.27325797584469,
+        "accuracy": 90,
+        "at": "2026-06-27T15:05:19.395Z",
+        "locationName": null,
+        "outsideGeofence": false
+      },
+      {
+        "lat": 28.545361296794283,
+        "lng": 77.27325797584469,
+        "accuracy": 90,
+        "at": "2026-06-27T15:05:21.435Z",
+        "locationName": null,
+        "outsideGeofence": false
+      },
+      {
+        "lat": 28.545178038102794,
+        "lng": 77.27319335697689,
+        "accuracy": 135,
+        "at": "2026-06-27T15:05:24.505Z",
+        "locationName": null,
+        "outsideGeofence": false
+      },
+      {
+        "lat": 28.545361296794283,
+        "lng": 77.27325797584469,
+        "accuracy": 90,
+        "at": "2026-06-27T15:05:25.561Z",
+        "locationName": null,
+        "outsideGeofence": false
+      },
+      {
+        "lat": 28.545178038102794,
+        "lng": 77.27319335697689,
+        "accuracy": 135,
+        "at": "2026-06-27T15:05:26.397Z",
+        "locationName": null,
+        "outsideGeofence": false
+      },
+      {
+        "lat": 28.545178038102794,
+        "lng": 77.27319335697689,
+        "accuracy": 135,
+        "at": "2026-06-27T15:05:28.527Z",
+        "locationName": null,
+        "outsideGeofence": false
+      },
+      {
+        "lat": 28.545178038102794,
+        "lng": 77.27319335697689,
+        "accuracy": 135,
+        "at": "2026-06-27T15:05:30.445Z",
+        "locationName": null,
+        "outsideGeofence": false
+      },
+      {
+        "lat": 28.545178038102794,
+        "lng": 77.27319335697689,
+        "accuracy": 135,
+        "at": "2026-06-27T15:05:32.420Z",
+        "locationName": null,
+        "outsideGeofence": false
+      },
+      {
+        "lat": 28.545178038102794,
+        "lng": 77.27319335697689,
+        "accuracy": 135,
+        "at": "2026-06-27T15:05:36.449Z",
+        "locationName": null,
+        "outsideGeofence": false
+      },
+      {
+        "lat": 28.54521724473104,
+        "lng": 77.2731659909798,
+        "accuracy": 92,
+        "at": "2026-06-27T15:05:38.396Z",
+        "locationName": null,
+        "outsideGeofence": false
+      },
+      {
+        "lat": 28.54521724473104,
+        "lng": 77.2731659909798,
+        "accuracy": 92,
+        "at": "2026-06-27T15:05:40.483Z",
+        "locationName": null,
+        "outsideGeofence": false
+      },
+      {
+        "lat": 28.54521724473104,
+        "lng": 77.2731659909798,
+        "accuracy": 92,
+        "at": "2026-06-27T15:05:42.457Z",
+        "locationName": null,
+        "outsideGeofence": false
+      },
+      {
+        "lat": 28.54521724473104,
+        "lng": 77.2731659909798,
+        "accuracy": 92,
+        "at": "2026-06-27T15:05:44.395Z",
+        "locationName": null,
+        "outsideGeofence": false
+      },
+      {
+        "lat": 28.54521724473104,
+        "lng": 77.2731659909798,
+        "accuracy": 92,
+        "at": "2026-06-27T15:05:46.403Z",
+        "locationName": null,
+        "outsideGeofence": false
+      },
+      {
+        "lat": 28.54521724473104,
+        "lng": 77.2731659909798,
+        "accuracy": 92,
+        "at": "2026-06-27T15:05:48.398Z",
+        "locationName": null,
+        "outsideGeofence": false
+      },
+      {
+        "lat": 28.545194078584075,
+        "lng": 77.27319000297055,
+        "accuracy": 97,
+        "at": "2026-06-27T15:05:51.443Z",
+        "locationName": null,
+        "outsideGeofence": false
+      },
+      {
+        "lat": 28.54521724473104,
+        "lng": 77.2731659909798,
+        "accuracy": 92,
+        "at": "2026-06-27T15:05:52.524Z",
+        "locationName": null,
+        "outsideGeofence": false
+      },
+      {
+        "lat": 28.545194078584075,
+        "lng": 77.27319000297055,
+        "accuracy": 97,
+        "at": "2026-06-27T15:05:53.600Z",
+        "locationName": null,
+        "outsideGeofence": false
+      },
+      {
+        "lat": 28.545194078584075,
+        "lng": 77.27319000297055,
+        "accuracy": 97,
+        "at": "2026-06-27T15:05:55.403Z",
+        "locationName": null,
+        "outsideGeofence": false
+      },
+      {
+        "lat": 28.545194078584075,
+        "lng": 77.27319000297055,
+        "accuracy": 97,
+        "at": "2026-06-27T15:05:57.402Z",
+        "locationName": null,
+        "outsideGeofence": false
+      },
+      {
+        "lat": 28.545194078584075,
+        "lng": 77.27319000297055,
+        "accuracy": 97,
+        "at": "2026-06-27T15:05:59.401Z",
+        "locationName": null,
+        "outsideGeofence": false
+      },
+      {
+        "lat": 28.545194078584075,
+        "lng": 77.27319000297055,
+        "accuracy": 97,
+        "at": "2026-06-27T15:06:03.449Z",
+        "locationName": null,
+        "outsideGeofence": false
+      },
+      {
+        "lat": 28.54535399492055,
+        "lng": 77.27321160873622,
+        "accuracy": 94,
+        "at": "2026-06-27T15:06:05.423Z",
+        "locationName": null,
+        "outsideGeofence": false
+      },
+      {
+        "lat": 28.54535399492055,
+        "lng": 77.27321160873622,
+        "accuracy": 94,
+        "at": "2026-06-27T15:06:07.402Z",
+        "locationName": null,
+        "outsideGeofence": false
+      },
+      {
+        "lat": 28.54535399492055,
+        "lng": 77.27321160873622,
+        "accuracy": 94,
+        "at": "2026-06-27T15:06:09.418Z",
+        "locationName": null,
+        "outsideGeofence": false
+      },
+      {
+        "lat": 28.54535399492055,
+        "lng": 77.27321160873622,
+        "accuracy": 94,
+        "at": "2026-06-27T15:06:11.407Z",
+        "locationName": null,
+        "outsideGeofence": false
+      },
+      {
+        "lat": 28.54535399492055,
+        "lng": 77.27321160873622,
+        "accuracy": 94,
+        "at": "2026-06-27T15:06:13.479Z",
+        "locationName": null,
+        "outsideGeofence": false
+      },
+      {
+        "lat": 28.54535399492055,
+        "lng": 77.27321160873622,
+        "accuracy": 94,
+        "at": "2026-06-27T15:06:21.646Z",
+        "locationName": null,
+        "outsideGeofence": false
+      }
+    ],
+    "attachments": [],
+    "status": "pending",
+    "_id": "6f85945d-a13a-4163-a480-47c72b84a807",
+    "updatedAt": "2026-06-27T15:06:39.551783",
+    "workType": "work_from_home"
+  }
+]

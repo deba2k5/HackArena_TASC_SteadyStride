@@ -65,3 +65,20 @@ yarn-error.log*
 # OS
 .DS_Store
 Thumbs.db
+
+# Large ML model files (too large for GitHub)
+backend/local_bert_timesheet_model/
+tia-platform/backend/app/local_bert_timesheet_model/
+*.safetensors
+*.bin
+optimizer.pt
+rng_state.pth
+scheduler.pt
+
+# Temp files
+backend/temp_timesheet.xlsx
+backend/chroma_db/
+uploads/
+
+# Excel data files committed separately
+# src/pages/TASC_Sample_Database_vF.xlsx

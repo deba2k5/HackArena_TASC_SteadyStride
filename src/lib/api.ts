@@ -2,17 +2,21 @@ import { API_BASE } from "./config";
 import type {
   AuditLog,
   BreakEntry,
+  Customer,
+  Employee,
   EmployeeProfile,
+  Invoice,
   LocationPing,
+  Query,
+  TIAAuditLog,
+  TIAMetrics,
+  Timesheet,
   Status,
   WorkSession,
   WorkType,
 } from "./types";
 
-/**
- * MongoDB-backed data layer. Firebase is used only for authentication.
- * Local development defaults to http://localhost:5000/api.
- */
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 const uid = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
 const today = () => new Date().toISOString().slice(0, 10);
@@ -26,7 +30,20 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return res.json();
 }
 
+async function requestMultipart<T>(path: string, formData: FormData): Promise<T> {
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: "POST",
+    body: formData,
+  });
+  if (!res.ok) throw new Error(`API ${res.status}: ${await res.text()}`);
+  return res.json();
+}
+
+// ─── API object ──────────────────────────────────────────────────────────────
+
 export const api = {
+  // ── Legacy profile / session (kept for auth compatibility) ─────────────────
+
   async getProfile(email: string): Promise<EmployeeProfile | null> {
     try {
       return await request(`/profiles/${encodeURIComponent(email)}`);
@@ -70,10 +87,7 @@ export const api = {
   },
 
   async updateSession(id: string, patch: Partial<WorkSession>): Promise<WorkSession> {
-    return request(`/sessions/${id}`, {
-      method: "PATCH",
-      body: JSON.stringify(patch),
-    });
+    return request(`/sessions/${id}`, { method: "PATCH", body: JSON.stringify(patch) });
   },
 
   async addBreak(id: string, type: BreakEntry["type"]): Promise<WorkSession> {
@@ -102,7 +116,12 @@ export const api = {
     return this.updateSession(id, { workType });
   },
 
-  async startTravel(id: string, destination: string, startLat?: number, startLng?: number) {
+  async startTravel(
+    id: string,
+    destination: string,
+    startLat?: number,
+    startLng?: number
+  ): Promise<WorkSession> {
     const s = (await this.listSessions()).find((x) => x.id === id);
     if (!s) throw new Error("Session not found");
     const travels = s.travels || [];
@@ -116,7 +135,7 @@ export const api = {
     endLat?: number,
     endLng?: number,
     distanceMeters?: number
-  ) {
+  ): Promise<WorkSession> {
     const s = (await this.listSessions()).find((x) => x.id === id);
     if (!s) throw new Error("Session not found");
     const travels = (s.travels || []).map((t) =>
@@ -136,22 +155,17 @@ export const api = {
       clockOut: new Date().toISOString(),
       adminComment: note || `Force clocked-out by ${adminEmail}`,
     });
-    await this.log({
-      actor: adminEmail,
-      action: "session.force_clock_out",
-      target: id,
-      meta: { email: s.email, note },
-    });
+    await this.log({ actor: adminEmail, action: "session.force_clock_out", target: id, meta: { email: s.email, note } });
     return s;
   },
 
-  async submitReport(id: string, description: string, attachments: WorkSession["attachments"]) {
+  async submitReport(id: string, description: string, attachments: WorkSession["attachments"]): Promise<WorkSession> {
     const s = await this.updateSession(id, { description, attachments, status: "pending" });
     await this.log({ actor: s.email, action: "report.submitted", target: id });
     return s;
   },
 
-  async reviewSession(id: string, status: "approved" | "rejected", comment: string, reviewer: string) {
+  async reviewSession(id: string, status: "approved" | "rejected", comment: string, reviewer: string): Promise<WorkSession> {
     const s = await this.updateSession(id, {
       status,
       adminComment: comment,
@@ -164,13 +178,112 @@ export const api = {
 
   async log(entry: Omit<AuditLog, "id" | "at">): Promise<AuditLog> {
     const log: AuditLog = { ...entry, id: uid(), at: new Date().toISOString() };
-    return request(`/audit`, { method: "POST", body: JSON.stringify(log) });
+    try {
+      return await request(`/audit`, { method: "POST", body: JSON.stringify(log) });
+    } catch {
+      return log;
+    }
   },
 
   async listAudit(): Promise<AuditLog[]> {
     return request(`/audit`);
   },
+
+  // ── TIA endpoints ──────────────────────────────────────────────────────────
+
+  /** GET /api/metrics */
+  async getMetrics(): Promise<TIAMetrics> {
+    return request(`/metrics`);
+  },
+
+  /** GET /api/timesheets?client_code=... */
+  async listTimesheets(clientCode?: string): Promise<Timesheet[]> {
+    const qs = clientCode ? `?client_code=${encodeURIComponent(clientCode)}` : "";
+    return request(`/timesheets${qs}`);
+  },
+
+  /** POST /api/timesheets — multipart or JSON */
+  async uploadTimesheet(formData: FormData): Promise<Timesheet> {
+    return requestMultipart(`/timesheets`, formData);
+  },
+
+  /** POST /api/timesheets/{id}/approve */
+  async approveTimesheet(id: string, records: unknown[]): Promise<Timesheet> {
+    return request(`/timesheets/${encodeURIComponent(id)}/approve`, {
+      method: "POST",
+      body: JSON.stringify({ records }),
+    });
+  },
+
+  /** GET /api/invoices?client_code=... */
+  async listInvoices(clientCode?: string): Promise<Invoice[]> {
+    const qs = clientCode ? `?client_code=${encodeURIComponent(clientCode)}` : "";
+    return request(`/invoices${qs}`);
+  },
+
+  /** POST /api/invoices/{id}/approve */
+  async approveInvoice(id: string): Promise<Invoice> {
+    return request(`/invoices/${encodeURIComponent(id)}/approve`, { method: "POST" });
+  },
+
+  /** POST /api/invoices/dispatch */
+  async dispatchInvoices(): Promise<{ dispatched: number; ids: string[] }> {
+    return request(`/invoices/dispatch`, { method: "POST" });
+  },
+
+  /** GET /api/customers */
+  async listCustomers(): Promise<Customer[]> {
+    return request(`/customers`);
+  },
+
+  /** GET /api/employees?client_code=...&email=... */
+  async listEmployees(clientCode?: string, email?: string): Promise<Employee[]> {
+    const params = new URLSearchParams();
+    if (clientCode) params.set("client_code", clientCode);
+    if (email) params.set("email", email);
+    const qs = params.toString();
+    return request(`/employees${qs ? `?${qs}` : ""}`);
+  },
+
+  /** GET /api/queries?client_code=... */
+  async listQueries(clientCode?: string): Promise<Query[]> {
+    const qs = clientCode ? `?client_code=${encodeURIComponent(clientCode)}` : "";
+    return request(`/queries${qs}`);
+  },
+
+  /** POST /api/queries */
+  async createQuery(data: {
+    client_code: string;
+    invoice_id: string;
+    subject: string;
+    message: string;
+  }): Promise<Query> {
+    return request(`/queries`, { method: "POST", body: JSON.stringify(data) });
+  },
+
+  /** POST /api/queries/{id}/resolve */
+  async resolveQuery(id: string, reply: string): Promise<Query> {
+    return request(`/queries/${encodeURIComponent(id)}/resolve`, {
+      method: "POST",
+      body: JSON.stringify({ reply }),
+    });
+  },
+
+  /** POST /api/chat */
+  async chat(query: string, clientCode?: string): Promise<{ response: string }> {
+    return request(`/chat`, {
+      method: "POST",
+      body: JSON.stringify({ query, client_code: clientCode }),
+    });
+  },
+
+  /** GET /api/audit (TIA audit logs) */
+  async listAuditLogs(): Promise<TIAAuditLog[]> {
+    return request(`/audit`);
+  },
 };
+
+// ─── Formatting helpers ───────────────────────────────────────────────────────
 
 export const fmtDuration = (ms?: number) => {
   if (!ms || ms < 0) return "0h 0m";
@@ -178,7 +291,13 @@ export const fmtDuration = (ms?: number) => {
   return `${Math.floor(m / 60)}h ${m % 60}m`;
 };
 
-export const haversine = (a: { lat: number; lng: number }, b: { lat: number; lng: number }) => {
+export const fmtAED = (amount: number) =>
+  `AED ${amount.toLocaleString("en-AE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+export const haversine = (
+  a: { lat: number; lng: number },
+  b: { lat: number; lng: number }
+) => {
   const R = 6371000;
   const dLat = ((b.lat - a.lat) * Math.PI) / 180;
   const dLng = ((b.lng - a.lng) * Math.PI) / 180;
@@ -197,7 +316,6 @@ export const reverseGeocode = async (lat: number, lng: number): Promise<string |
     );
     const data = await res.json();
     if (data.display_name) {
-      // Try to get city, state, country for simplicity
       const addr = data.address;
       if (addr) {
         const parts = [addr.city, addr.state, addr.country].filter(Boolean);

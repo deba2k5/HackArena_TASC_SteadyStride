@@ -1,3 +1,5 @@
+// ─── Legacy types (kept for auth compatibility) ──────────────────────────────
+
 export type Role = "employee" | "super_admin" | "department_manager" | "hr_officer";
 
 export type EmployeeType = "permanent" | "contractual";
@@ -61,7 +63,7 @@ export interface WorkSession {
   employeeId: string;
   email: string;
   fullName: string;
-  date: string; // YYYY-MM-DD
+  date: string;
   clockIn: string;
   clockOut?: string;
   workType?: WorkType;
@@ -85,4 +87,120 @@ export interface AuditLog {
   target?: string;
   at: string;
   meta?: Record<string, unknown>;
+}
+
+// ─── TIA (Touchless Invoice Agent) types ─────────────────────────────────────
+
+export interface TIAMetrics {
+  touchless_rate: number;
+  extraction_accuracy: number;
+  avg_processing_time_mins: number;
+  total_invoiced_amount: number;
+  passed_validation_count: number;
+  total_invoices_count: number;
+}
+
+export interface Employee {
+  emp_id: string;
+  full_name: string;
+  email: string;
+  client_code: string;
+  client_name: string;
+  job_title: string;
+  department: string;
+  nationality: string;
+  basic: number;
+  total_ctc: number;
+  status: string;
+}
+
+export interface Customer {
+  client_code: string;
+  client_name: string;
+  city: string;
+  industry: string;
+  contact_email: string;
+  status: string;
+  dispatch_rule: string;
+  validation_profile: Record<string, unknown>;
+}
+
+export interface ExtractedRecord {
+  emp_id?: string;
+  full_name: string;
+  days_worked: number;
+  overtime_hours?: number;
+  reimbursements?: number;
+  confidence?: number;
+  match_status?: string;
+  match_candidates?: { emp_id: string; full_name: string; score: number }[];
+  [key: string]: unknown;
+}
+
+export interface Timesheet {
+  id: string;
+  client_code: string;
+  client_name: string;
+  pay_period: string;
+  input_type: string;
+  file_name?: string;
+  status: string;
+  uploaded_at: string;
+  uploaded_by: string;
+  extracted_data: {
+    records: ExtractedRecord[];
+    overall_confidence: number;
+    meta: Record<string, unknown>;
+  };
+  exceptions: string[];
+  is_touchless: boolean;
+}
+
+export interface LineItem {
+  emp_id: string;
+  full_name: string;
+  basic: number;
+  days_worked: number;
+  overtime_hours?: number;
+  reimbursements?: number;
+  gross_pay: number;
+  [key: string]: unknown;
+}
+
+export interface Invoice {
+  id: string;
+  timesheet_id: string;
+  client_code: string;
+  client_name: string;
+  pay_period: string;
+  total_amount: number;
+  currency: string;
+  line_items: LineItem[];
+  generated_at: string;
+  validation_status: string;
+  validation_errors: { field: string; message: string; severity: string }[];
+  dispatch_status: string;
+  dispatched_at?: string;
+}
+
+export interface Query {
+  id: string;
+  client_code: string;
+  client_name: string;
+  invoice_id: string;
+  subject: string;
+  message: string;
+  status: string;
+  created_at: string;
+  replies: { author: string; message: string; at: string }[];
+}
+
+export interface TIAAuditLog {
+  id: string;
+  action: string;
+  actor: string;
+  target_id?: string;
+  client_code?: string;
+  details?: Record<string, unknown>;
+  at: string;
 }

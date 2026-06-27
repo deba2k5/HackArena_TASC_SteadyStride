@@ -1,19 +1,17 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import {
-  Clock,
-  FileBarChart,
-  User,
   LayoutDashboard,
+  AlertTriangle,
+  FileText,
   Users,
-  CheckSquare,
-  Map,
   ScrollText,
   LogOut,
-  PieChart,
+  Receipt,
+  MessageSquare,
+  Bot,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import logoAsset from "@/assets/sinhas-logo.asset.json";
 
 const linkBase =
   "group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-all";
@@ -25,20 +23,21 @@ export default function AppSidebar() {
   const nav = useNavigate();
   const isAdmin = role !== "employee";
 
-  const items = isAdmin
-    ? [
-        { to: "/admin", label: "Overview", icon: LayoutDashboard, end: true },
-        { to: "/admin/employees", label: "Employees", icon: Users },
-        { to: "/admin/approvals", label: "Pending Reports", icon: CheckSquare },
-        { to: "/admin/map", label: "Live Map", icon: Map },
-        { to: "/admin/analytics", label: "Analytics", icon: PieChart },
-        { to: "/admin/audit", label: "Audit Log", icon: ScrollText },
-      ]
-    : [
-        { to: "/", label: "Dashboard", icon: Clock, end: true },
-        { to: "/reports", label: "My Reports", icon: FileBarChart },
-        { to: "/profile", label: "Profile", icon: User },
-      ];
+  const adminItems = [
+    { to: "/admin", label: "Dashboard", icon: LayoutDashboard, end: true },
+    { to: "/admin/exceptions", label: "Exception Queue", icon: AlertTriangle },
+    { to: "/admin/invoices", label: "Invoices", icon: FileText },
+    { to: "/admin/employees", label: "Employees", icon: Users },
+    { to: "/admin/audit", label: "Audit Log", icon: ScrollText },
+  ];
+
+  const employeeItems = [
+    { to: "/", label: "My Invoices & Timesheets", icon: Receipt, end: true },
+    { to: "/queries", label: "My Reports", icon: MessageSquare },
+    { to: "/assistant", label: "Clock In / Out", icon: Bot },
+  ];
+
+  const items = isAdmin ? adminItems : employeeItems;
 
   const initials = (profile?.fullName || user?.email || "?")
     .split(/[\s@]/)
@@ -49,25 +48,24 @@ export default function AppSidebar() {
 
   return (
     <aside className="w-64 shrink-0 border-r border-sidebar-border bg-sidebar flex flex-col">
+      {/* Brand header */}
       <div className="h-20 flex items-center gap-3 px-5 border-b border-sidebar-border">
-        <img
-          src={logoAsset.url}
-          alt="Sinha's Group"
-          className="h-11 w-11 rounded-lg object-contain bg-white ring-1 ring-sidebar-border p-0.5"
-        />
+        <div className="h-11 w-11 rounded-lg bg-gradient-primary grid place-items-center shrink-0">
+          <span className="text-primary-foreground font-bold text-lg leading-none">TIA</span>
+        </div>
         <div className="min-w-0">
-          <div className="text-sm font-semibold leading-tight truncate">Sinha's Group</div>
+          <div className="text-sm font-semibold leading-tight truncate">TASC Outsourcing</div>
           <div className="text-[11px] text-muted-foreground">
-            {isAdmin ? "Admin Console" : "Workforce Portal"}
+            {isAdmin ? "Admin Console" : "Client Portal"}
           </div>
         </div>
       </div>
 
       <div className="px-4 pt-4 pb-2 text-[10px] uppercase tracking-wider text-muted-foreground/70 font-semibold">
-        {isAdmin ? "Manage" : "Workspace"}
+        {isAdmin ? "TIA Command Center" : "My Workspace"}
       </div>
 
-      <nav className="flex-1 px-3 pb-3 space-y-1">
+      <nav className="flex-1 px-3 pb-3 space-y-1 overflow-y-auto">
         {items.map((it) => (
           <NavLink
             key={it.to}
@@ -88,7 +86,9 @@ export default function AppSidebar() {
           </div>
           <div className="min-w-0 flex-1">
             <div className="text-xs font-semibold truncate">{profile?.fullName || user?.email}</div>
-            <div className="text-[11px] text-muted-foreground truncate">{user?.email}</div>
+            <div className="text-[11px] text-muted-foreground truncate capitalize">
+              {isAdmin ? "Administrator" : "Client User"}
+            </div>
           </div>
         </div>
         <Button

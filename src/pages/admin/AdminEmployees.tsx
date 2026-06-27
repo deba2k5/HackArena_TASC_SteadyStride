@@ -1,577 +1,385 @@
-import { useEffect, useMemo, useState } from "react";
-import { api, fmtDuration } from "@/lib/api";
-import type { EmployeeProfile, WorkSession } from "@/lib/types";
-import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { api, fmtAED } from "@/lib/api";
+import type { Employee, Customer } from "@/lib/types";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { toast } from "sonner";
-import { Download, FileSpreadsheet, Plus, BarChart3, Eye, FileText } from "lucide-react";
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Users, Search, Eye, Download, RefreshCw, User, Building2, Briefcase, DollarSign, Link2 } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
+import { toast } from "sonner";
+
+async function linkPortalEmail(empId: string, portalEmail: string): Promise<void> {
+  const res = await fetch(`/api/employees/${encodeURIComponent(empId)}/link-email`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ portal_email: portalEmail }),
+  });
+  if (!res.ok) throw new Error(await res.text());
+}
 
 export default function AdminEmployees() {
-  const [profiles, setProfiles] = useState<EmployeeProfile[]>([]);
-  const [sessions, setSessions] = useState<WorkSession[]>([]);
-  const [q, setQ] = useState("");
-  const [dept, setDept] = useState<string>("all");
-  const [status, setStatus] = useState<string>("all");
-  const [type, setType] = useState<string>("all");
-  const [selectedEmployee, setSelectedEmployee] = useState<EmployeeProfile | null>(null);
-  const [reportDialogOpen, setReportDialogOpen] = useState(false);
-  const [tick, setTick] = useState(0);
+  const qc = useQueryClient();
+  const [search, setSearch] = useState("");
+  const [filterClient, setFilterClient] = useState("all");
+  const [filterDept, setFilterDept] = useState("all");
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [selected, setSelected] = useState<Employee | null>(null);
+  const [linkOpen, setLinkOpen] = useState(false);
+  const [linkEmpId, setLinkEmpId] = useState("");
+  const [linkEmail, setLinkEmail] = useState("");
 
-  const reload = async () => {
-    setProfiles(await api.listProfiles());
-    setSessions(await api.listSessions());
-  };
-  useEffect(() => {
-    reload();
-    const interval = setInterval(() => {
-      reload();
-      setTick(t => t + 1);
-    }, 10000);
-    return () => clearInterval(interval);
-  }, []);
+  const linkMutation = useMutation({
+    mutationFn: () => linkPortalEmail(linkEmpId, linkEmail.trim()),
+    onSuccess: () => {
+      toast.success(`✅ ${linkEmail} is now linked to ${linkEmpId}`);
+      qc.invalidateQueries({ queryKey: ["employees"] });
+      qc.invalidateQueries({ queryKey: ["employee-by-email"] });
+      setLinkOpen(false);
+      setLinkEmpId(""); setLinkEmail("");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
 
-  const activeEmails = new Set(sessions.filter((s) => !s.clockOut).map((s) => s.email));
-  const departments = Array.from(new Set(profiles.map((p) => p.department).filter(Boolean)));
+  const { data: customers = [] } = useQuery<Customer[]>({
+    queryKey: ["customers"],
+    queryFn: () => api.listCustomers(),
+  });
 
-  const filtered = useMemo(() => profiles.filter((p) => {
-    if (q && !`${p.fullName} ${p.email} ${p.employeeId}`.toLowerCase().includes(q.toLowerCase())) return false;
-    if (dept !== "all" && p.department !== dept) return false;
-    if (type !== "all" && p.employeeType !== type) return false;
-    if (status === "active" && !activeEmails.has(p.email)) return false;
-    if (status === "inactive" && activeEmails.has(p.email)) return false;
-    if (status === "deactivated" && p.active) return false;
-    return true;
-  }), [profiles, q, dept, type, status, activeEmails]);
+  const { data: employees = [], isLoading } = useQuery<Employee[]>({
+    queryKey: ["employees"],
+    queryFn: () => api.listEmployees(),
+  });
 
-  const toggleActive = async (p: EmployeeProfile) => {
-    await api.upsertProfile({ ...p, active: !p.active });
-    await api.log({ actor: "admin", action: p.active ? "employee.deactivate" : "employee.activate", target: p.email });
-    reload();
-  };
+  const departments = [...new Set(employees.map((e) => e.department))].sort();
 
-  const exportCsv = () => {
-    const rows = [
-      ["Employee ID", "Full name", "Email", "Department", "Type", "Active", "Last session"],
-      ...filtered.map((p) => {
-        const last = sessions.find((s) => s.email === p.email);
-        return [p.employeeId, p.fullName, p.email, p.department, p.employeeType, p.active ? "yes" : "no", last?.date || ""];
-      }),
-    ];
-    const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
-    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
-    Object.assign(document.createElement("a"), { href: url, download: "employees.csv" }).click();
-  };
-
-  const exportPdf = () => {
-    const html = `
-      <html><head><title>Employees</title>
-      <style>body{font-family:sans-serif;padding:20px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ddd;padding:6px;font-size:12px}</style>
-      </head><body><h1>Employee Report</h1>
-      <table><thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Department</th><th>Type</th><th>Status</th></tr></thead>
-      <tbody>${filtered.map((p) => `<tr><td>${p.employeeId}</td><td>${p.fullName}</td><td>${p.email}</td><td>${p.department}</td><td>${p.employeeType}</td><td>${p.active ? "Active" : "Deactivated"}</td></tr>`).join("")}</tbody>
-      </table><script>print()</script></body></html>`;
-    const w = window.open("", "_blank");
-    if (w) { w.document.write(html); w.document.close(); }
-  };
-
-  const getEmployeeStats = (email: string) => {
-    const employeeSessions = sessions.filter(s => s.email === email);
-    const now = Date.now();
-    
-    // Calculate stats
-    let totalWorkMs = 0;
-    let totalBreakMs = 0;
-    const last7Days = [];
-    
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      const dateKey = d.toISOString().slice(0, 10);
-      const daySessions = employeeSessions.filter(s => s.date === dateKey);
-      
-      let dayWorkMs = 0;
-      let dayBreakMs = 0;
-      
-      daySessions.forEach(s => {
-        if (!s.clockOut) {
-          dayWorkMs += now - new Date(s.clockIn).getTime();
-          dayBreakMs += s.breaks.reduce((sum, b) => {
-            const end = b.end ? new Date(b.end).getTime() : now;
-            return sum + (end - new Date(b.start).getTime());
-          }, 0);
-        } else {
-          dayWorkMs += s.totalWorkMs || 0;
-          dayBreakMs += s.totalBreakMs || 0;
-        }
-      });
-      
-      totalWorkMs += dayWorkMs;
-      totalBreakMs += dayBreakMs;
-      
-      last7Days.push({
-        date: dateKey.slice(5),
-        workHours: +(dayWorkMs / 3600000).toFixed(2),
-        breakHours: +(dayBreakMs / 3600000).toFixed(2),
-      });
+  const filtered = employees.filter((e) => {
+    if (filterClient !== "all" && e.client_code !== filterClient) return false;
+    if (filterDept !== "all" && e.department !== filterDept) return false;
+    if (filterStatus !== "all" && e.status !== filterStatus) return false;
+    if (search) {
+      const q = search.toLowerCase();
+      return (
+        e.full_name.toLowerCase().includes(q) ||
+        e.emp_id.toLowerCase().includes(q) ||
+        e.email.toLowerCase().includes(q) ||
+        e.job_title.toLowerCase().includes(q)
+      );
     }
-    
-    return { employeeSessions, totalWorkMs, totalBreakMs, last7Days };
+    return true;
+  });
+
+  // Duplicate names detection
+  const nameCounts = employees.reduce<Record<string, number>>((acc, e) => {
+    acc[e.full_name] = (acc[e.full_name] ?? 0) + 1;
+    return acc;
+  }, {});
+  const isDuplicate = (name: string) => (nameCounts[name] ?? 0) > 1;
+
+  const exportCSV = () => {
+    const header = ["Emp ID","Full Name","Email","Client Code","Client Name","Job Title","Department","Nationality","Status","Basic","Housing","Transport","Food","Phone","Total CTC","IBAN"];
+    const rows = filtered.map((e) => [e.emp_id, e.full_name, e.email, e.client_code, e.client_name, e.job_title, e.department, (e as Record<string,unknown>).nationality as string ?? "", e.status, e.basic, (e as Record<string,unknown>).housing ?? 0, (e as Record<string,unknown>).transport ?? 0, (e as Record<string,unknown>).food ?? 0, (e as Record<string,unknown>).phone ?? 0, e.total_ctc, (e as Record<string,unknown>).iban ?? ""]);
+    const csv = [header, ...rows].map((r) => r.join(",")).join("\n");
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+    a.download = "employees_export.csv";
+    a.click();
   };
 
-  const exportEmployeePdf = (employee: EmployeeProfile) => {
-    const stats = getEmployeeStats(employee.email);
-    const doc = new jsPDF();
-    
-    doc.setFontSize(20);
-    doc.text("Employee Report", 14, 22);
-    
-    doc.setFontSize(12);
-    doc.text(`Employee: ${employee.fullName}`, 14, 32);
-    doc.text(`Email: ${employee.email}`, 14, 40);
-    doc.text(`Department: ${employee.department}`, 14, 48);
-    doc.text(`Type: ${employee.employeeType}`, 14, 56);
-    doc.text(`Total Work Time: ${fmtDuration(stats.totalWorkMs)}`, 14, 64);
-    doc.text(`Total Break Time: ${fmtDuration(stats.totalBreakMs)}`, 14, 72);
-    
-    // Work Sessions Table
-    const tableData = stats.employeeSessions.slice().reverse().map(s => [
-      s.date,
-      s.clockIn ? new Date(s.clockIn).toLocaleTimeString() : "-",
-      s.clockOut ? new Date(s.clockOut).toLocaleTimeString() : "-",
-      s.workType || "N/A",
-      s.status,
-      s.totalWorkMs ? fmtDuration(s.totalWorkMs) : "-",
-    ]);
-    
+  const exportPDF = () => {
+    const doc = new jsPDF({ orientation: "landscape" });
+    doc.setFontSize(14);
+    doc.text("TASC Employee Master — " + new Date().toLocaleDateString(), 14, 16);
     autoTable(doc, {
-      startY: 80,
-      head: [["Date", "Clock In", "Clock Out", "Work Type", "Status", "Duration"]],
-      body: tableData,
-      theme: "grid",
-      styles: { fontSize: 8, cellPadding: 3 },
+      head: [["Emp ID","Name","Email","Client","Job Title","Dept","Status","Total CTC"]],
+      body: filtered.map((e) => [e.emp_id, e.full_name, e.email, `${e.client_code} - ${e.client_name}`, e.job_title, e.department, e.status, `AED ${e.total_ctc.toLocaleString()}`]),
+      startY: 22,
+      styles: { fontSize: 7 },
     });
-    
-    doc.save(`${employee.fullName.replace(/\s+/g, "_")}_report.pdf`);
+    doc.save("employees_export.pdf");
   };
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
-        <div className="page-header">
-          <h1>Employees</h1>
-          <p>{filtered.length} of {profiles.length} total employees</p>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold">Employee Master</h1>
+          <p className="text-sm text-muted-foreground">200 employees across 10 clients — TASC database</p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={exportCsv} className="gap-2 flex-1 sm:flex-none"><FileSpreadsheet className="h-4 w-4" /><span className="hidden xs:inline">Export </span>CSV</Button>
-          <Button variant="outline" onClick={exportPdf} className="gap-2 flex-1 sm:flex-none"><Download className="h-4 w-4" /><span className="hidden xs:inline">Export </span>PDF</Button>
-          <AddEmployeeDialog onAdded={reload} />
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => qc.invalidateQueries({ queryKey: ["employees"] })}>
+            <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Refresh
+          </Button>
+          <Button variant="outline" size="sm" onClick={exportCSV}><Download className="h-3.5 w-3.5 mr-1.5" />CSV</Button>
+          <Button variant="outline" size="sm" onClick={exportPDF}><Download className="h-3.5 w-3.5 mr-1.5" />PDF</Button>
+          <Button size="sm" className="gap-1.5 bg-indigo-600 hover:bg-indigo-700" onClick={() => setLinkOpen(true)}>
+            <Link2 className="h-3.5 w-3.5" /> Link Portal Email
+          </Button>
         </div>
-      </header>
+      </div>
 
-      <Card className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        <Input placeholder="Search name / email / ID" value={q} onChange={(e) => setQ(e.target.value)} />
-        <Select value={dept} onValueChange={setDept}>
-          <SelectTrigger><SelectValue placeholder="Department" /></SelectTrigger>
+      {/* Summary cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {[
+          { label: "Total Employees", value: String(employees.length), color: "bg-indigo-500/10 text-indigo-700" },
+          { label: "Active", value: String(employees.filter((e) => e.status === "Active").length), color: "bg-green-500/10 text-green-700" },
+          { label: "Clients", value: String(customers.length), color: "bg-blue-500/10 text-blue-700" },
+          { label: "Duplicate Names", value: String(Object.values(nameCounts).filter((v) => v > 1).length), color: "bg-orange-500/10 text-orange-700" },
+        ].map((s) => (
+          <Card key={s.label}>
+            <CardContent className="p-4">
+              <p className="text-xs text-muted-foreground uppercase tracking-wide">{s.label}</p>
+              <p className={`text-2xl font-bold mt-1 ${s.color}`}>{s.value}</p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Filters */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+          <Input value={search} onChange={(e) => setSearch(e.target.value)}
+            placeholder="Name, ID, email, title…" className="pl-9 w-56" />
+        </div>
+        <Select value={filterClient} onValueChange={setFilterClient}>
+          <SelectTrigger className="w-52"><SelectValue placeholder="All Clients" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All departments</SelectItem>
+            <SelectItem value="all">All Clients</SelectItem>
+            {customers.map((c) => (
+              <SelectItem key={c.client_code} value={c.client_code}>
+                {c.client_code} — {c.client_name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={filterDept} onValueChange={setFilterDept}>
+          <SelectTrigger className="w-40"><SelectValue placeholder="All Departments" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Depts</SelectItem>
             {departments.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}
           </SelectContent>
         </Select>
-        <Select value={type} onValueChange={setType}>
-          <SelectTrigger><SelectValue placeholder="Type" /></SelectTrigger>
+        <Select value={filterStatus} onValueChange={setFilterStatus}>
+          <SelectTrigger className="w-32"><SelectValue placeholder="All Status" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All types</SelectItem>
-            <SelectItem value="permanent">Permanent</SelectItem>
-            <SelectItem value="contractual">Contractual</SelectItem>
+            <SelectItem value="all">All</SelectItem>
+            <SelectItem value="Active">Active</SelectItem>
+            <SelectItem value="Inactive">Inactive</SelectItem>
           </SelectContent>
         </Select>
-        <Select value={status} onValueChange={setStatus}>
-          <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All status</SelectItem>
-            <SelectItem value="active">Working now</SelectItem>
-            <SelectItem value="inactive">Off-clock</SelectItem>
-            <SelectItem value="deactivated">Deactivated</SelectItem>
-          </SelectContent>
-        </Select>
-      </Card>
+        {(filterClient !== "all" || filterDept !== "all" || filterStatus !== "all" || search) && (
+          <Button variant="ghost" size="sm" onClick={() => { setFilterClient("all"); setFilterDept("all"); setFilterStatus("all"); setSearch(""); }}>
+            Clear
+          </Button>
+        )}
+        <span className="text-xs text-muted-foreground ml-auto">{filtered.length} employees</span>
+      </div>
 
-      <Card className="overflow-hidden">
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>ID</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead className="hidden md:table-cell">Email</TableHead>
-                <TableHead className="hidden sm:table-cell">Department</TableHead>
-                <TableHead className="hidden lg:table-cell">Type</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.map((p) => {
-                const stats = getEmployeeStats(p.email);
-                return (
-                  <TableRow key={p.email}>
-                    <TableCell className="font-mono text-xs">{p.employeeId}</TableCell>
+      {/* Table */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm font-semibold flex items-center gap-2">
+            <Users className="h-4 w-4 text-indigo-500" /> Employee Records
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Emp ID</TableHead>
+                  <TableHead>Full Name</TableHead>
+                  <TableHead>Client</TableHead>
+                  <TableHead>Job Title</TableHead>
+                  <TableHead>Department</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Total CTC</TableHead>
+                  <TableHead className="text-right">Action</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? Array.from({length:8}).map((_,i) => (
+                  <TableRow key={i}>{Array.from({length:9}).map((_,j) => (
+                    <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>
+                  ))}</TableRow>
+                )) : filtered.map((emp) => (
+                  <TableRow key={emp.emp_id} className="hover:bg-muted/30">
+                    <TableCell className="font-mono text-xs font-semibold">{emp.emp_id}</TableCell>
                     <TableCell>
-                      <div className="font-medium">{p.fullName}</div>
-                      <div className="md:hidden text-[11px] text-muted-foreground truncate max-w-[160px]">{p.email}</div>
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell">{p.email}</TableCell>
-                    <TableCell className="hidden sm:table-cell">{p.department}</TableCell>
-                    <TableCell className="hidden lg:table-cell capitalize">{p.employeeType}</TableCell>
-                    <TableCell>
-                      {!p.active ? <Badge variant="secondary">Off</Badge>
-                        : activeEmails.has(p.email) ? <Badge className="bg-success text-success-foreground">Working</Badge>
-                        : <Badge variant="outline">Idle</Badge>}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button 
-                          size="sm" 
-                          variant="ghost" 
-                          onClick={() => {
-                            setSelectedEmployee(p);
-                            setReportDialogOpen(true);
-                          }}
-                        >
-                          <Eye className="h-4 w-4 mr-1" /> View
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          variant="ghost" 
-                          onClick={() => exportEmployeePdf(p)}
-                        >
-                          <Download className="h-4 w-4 mr-1" /> PDF
-                        </Button>
-                        <Button size="sm" variant="ghost" onClick={() => toggleActive(p)}>
-                          {p.active ? "Deactivate" : "Reactivate"}
-                        </Button>
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-medium">{emp.full_name}</span>
+                        {isDuplicate(emp.full_name) && (
+                          <Badge variant="outline" className="text-[10px] bg-orange-500/10 text-orange-700 border-orange-200 px-1 py-0">
+                            dup
+                          </Badge>
+                        )}
                       </div>
                     </TableCell>
+                    <TableCell>
+                      <span className="text-xs font-mono bg-muted px-1.5 py-0.5 rounded">{emp.client_code}</span>
+                      <span className="ml-1.5 text-xs text-muted-foreground hidden xl:inline">{emp.client_name}</span>
+                    </TableCell>
+                    <TableCell className="text-sm">{emp.job_title}</TableCell>
+                    <TableCell className="text-sm">{emp.department}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{emp.email}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className={`text-xs ${emp.status === "Active" ? "bg-green-500/15 text-green-700 border-green-200" : "bg-red-500/15 text-red-700 border-red-200"}`}>
+                        {emp.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right font-semibold">{fmtAED(emp.total_ctc)}</TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSelected(emp)}>
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
                   </TableRow>
-                );
-              })}
-              {!filtered.length && (
-                <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">No employees match the filters</TableCell></TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
       </Card>
 
-      {/* Employee Report Dialog */}
-      {selectedEmployee && (
-        <EmployeeReportDialog
-          employee={selectedEmployee}
-          sessions={sessions}
-          open={reportDialogOpen}
-          onOpenChange={setReportDialogOpen}
-        />
-      )}
+      {/* Link Portal Email Dialog */}
+      <Dialog open={linkOpen} onOpenChange={(o) => { setLinkOpen(o); if (!o) { setLinkEmpId(""); setLinkEmail(""); } }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Link2 className="h-5 w-5 text-indigo-500" /> Link Portal Email to Employee
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 text-sm">
+            <p className="text-muted-foreground text-xs">
+              Map a Firebase login email (e.g. employee@gmail.com) to an employee record so they can access the portal and submit timesheets.
+            </p>
+            <div className="space-y-1.5">
+              <Label>Employee ID *</Label>
+              <Select value={linkEmpId} onValueChange={setLinkEmpId}>
+                <SelectTrigger><SelectValue placeholder="Select employee…" /></SelectTrigger>
+                <SelectContent className="max-h-72">
+                  {employees
+                    .filter((e) => !(e as Record<string,unknown>).is_demo_account)
+                    .sort((a, b) => a.emp_id.localeCompare(b.emp_id))
+                    .map((e) => (
+                      <SelectItem key={e.emp_id + e.email} value={e.emp_id}>
+                        {e.emp_id} — {e.full_name} ({e.client_code})
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Portal Login Email *</Label>
+              <Input
+                type="email"
+                value={linkEmail}
+                onChange={(e) => setLinkEmail(e.target.value)}
+                placeholder="e.g. employee@gmail.com"
+              />
+              <p className="text-[11px] text-muted-foreground">This must match exactly the email used to sign in via Firebase.</p>
+            </div>
+            {linkEmpId && (
+              <div className="rounded-lg bg-indigo-500/5 border border-indigo-100 p-3 text-xs">
+                {(() => {
+                  const emp = employees.find((e) => e.emp_id === linkEmpId && !(e as Record<string,unknown>).is_demo_account);
+                  return emp ? (
+                    <><p><span className="text-muted-foreground">Name:</span> <strong>{emp.full_name}</strong></p>
+                    <p><span className="text-muted-foreground">Client:</span> {emp.client_name}</p>
+                    <p><span className="text-muted-foreground">Dept:</span> {emp.department} · {emp.job_title}</p></>
+                  ) : null;
+                })()}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setLinkOpen(false)}>Cancel</Button>
+            <Button
+              disabled={!linkEmpId || !linkEmail.trim() || linkMutation.isPending}
+              onClick={() => linkMutation.mutate()}
+            >
+              {linkMutation.isPending ? "Linking…" : "Link Employee"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Employee Detail Dialog */}
+      <Dialog open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <User className="h-5 w-5 text-indigo-500" />
+              {selected?.full_name}
+              {selected && isDuplicate(selected.full_name) && (
+                <Badge variant="outline" className="text-xs bg-orange-500/10 text-orange-700 border-orange-200">
+                  Duplicate Name
+                </Badge>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+          {selected && (
+            <div className="space-y-4 text-sm">
+              <div className="grid grid-cols-2 gap-3">
+                <Detail icon={User} label="Emp ID" value={selected.emp_id} mono />
+                <Detail icon={Building2} label="Client" value={`${selected.client_code} — ${selected.client_name}`} />
+                <Detail icon={Briefcase} label="Job Title" value={selected.job_title} />
+                <Detail icon={Briefcase} label="Department" value={selected.department} />
+                <Detail label="Email" value={selected.email} />
+                <Detail label="Status" value={selected.status} />
+                <Detail label="Nationality" value={(selected as Record<string,unknown>).nationality as string ?? "—"} />
+                <Detail label="Date of Joining" value={(selected as Record<string,unknown>).date_of_joining as string ?? "—"} />
+              </div>
+              <div className="rounded-lg bg-indigo-500/5 border border-indigo-100 p-4">
+                <p className="text-xs font-semibold text-indigo-700 mb-3 flex items-center gap-1.5">
+                  <DollarSign className="h-3.5 w-3.5" /> Salary Breakdown (AED)
+                </p>
+                <div className="grid grid-cols-3 gap-2 text-xs">
+                  {[
+                    ["Basic",     (selected as Record<string,unknown>).basic as number],
+                    ["Housing",   (selected as Record<string,unknown>).housing as number],
+                    ["Transport", (selected as Record<string,unknown>).transport as number],
+                    ["Food",      (selected as Record<string,unknown>).food as number],
+                    ["Phone",     (selected as Record<string,unknown>).phone as number],
+                    ["Total CTC", selected.total_ctc],
+                  ].map(([k, v]) => (
+                    <div key={String(k)} className="bg-white rounded-md p-2 text-center shadow-sm">
+                      <p className="text-muted-foreground text-[10px]">{String(k)}</p>
+                      <p className="font-bold text-indigo-700">{Number(v).toLocaleString()}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="rounded-lg bg-muted/40 p-3">
+                <p className="text-xs text-muted-foreground mb-1">IBAN</p>
+                <p className="font-mono text-xs">{(selected as Record<string,unknown>).iban as string ?? "—"}</p>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
 
-function EmployeeReportDialog({ 
-  employee, 
-  sessions, 
-  open, 
-  onOpenChange 
-}: { 
-  employee: EmployeeProfile; 
-  sessions: WorkSession[]; 
-  open: boolean; 
-  onOpenChange: (open: boolean) => void; 
-}) {
-  const calculateSessionDurations = (s: WorkSession) => {
-    const clockIn = new Date(s.clockIn);
-    const clockOut = s.clockOut ? new Date(s.clockOut) : null;
-    const totalDayDurationMs = clockOut ? clockOut.getTime() - clockIn.getTime() : 0;
-    const actualWorkMs = (s.totalWorkMs || 0) - (s.totalBreakMs || 0);
-    return { totalDayDurationMs, actualWorkMs };
-  };
-
-  const stats = useMemo(() => {
-    const employeeSessions = sessions.filter(s => s.email === employee.email);
-    const now = Date.now();
-    
-    // Calculate stats
-    let totalWorkMs = 0;
-    let totalBreakMs = 0;
-    const last7Days = [];
-    
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      const dateKey = d.toISOString().slice(0, 10);
-      const daySessions = employeeSessions.filter(s => s.date === dateKey);
-      
-      let dayWorkMs = 0;
-      let dayBreakMs = 0;
-      
-      daySessions.forEach(s => {
-        if (!s.clockOut) {
-          dayWorkMs += now - new Date(s.clockIn).getTime();
-          dayBreakMs += s.breaks.reduce((sum, b) => {
-            const end = b.end ? new Date(b.end).getTime() : now;
-            return sum + (end - new Date(b.start).getTime());
-          }, 0);
-        } else {
-          dayWorkMs += s.totalWorkMs || 0;
-          dayBreakMs += s.totalBreakMs || 0;
-        }
-      });
-      
-      totalWorkMs += dayWorkMs;
-      totalBreakMs += dayBreakMs;
-      
-      last7Days.push({
-        date: dateKey.slice(5),
-        workHours: +((dayWorkMs - dayBreakMs) / 3600000).toFixed(2),
-        breakHours: +(dayBreakMs / 3600000).toFixed(2),
-      });
-    }
-    
-    return { employeeSessions, totalWorkMs: totalWorkMs - totalBreakMs, totalBreakMs, last7Days };
-  }, [sessions, employee]);
-
-  const exportPdf = () => {
-    const doc = new jsPDF();
-    
-    doc.setFontSize(18);
-    doc.text("Employee Report - " + employee.fullName, 14, 22);
-    
-    doc.setFontSize(12);
-    doc.text(`Employee: ${employee.fullName}`, 14, 32);
-    doc.text(`Email: ${employee.email}`, 14, 40);
-    doc.text(`Department: ${employee.department}`, 14, 48);
-    doc.text(`Type: ${employee.employeeType}`, 14, 56);
-    doc.text(`Total Work Time: ${fmtDuration(stats.totalWorkMs)}`, 14, 64);
-    doc.text(`Total Break Time: ${fmtDuration(stats.totalBreakMs)}`, 14, 72);
-    
-    // Work Sessions Table
-    let totalActualWorkMs = 0;
-    const tableData = stats.employeeSessions.slice().reverse().map(s => {
-      const { totalDayDurationMs, actualWorkMs } = calculateSessionDurations(s);
-      totalActualWorkMs += actualWorkMs;
-      return [
-        s.date,
-        s.clockIn ? new Date(s.clockIn).toLocaleTimeString() : "—",
-        s.clockOut ? new Date(s.clockOut).toLocaleTimeString() : "—",
-        fmtDuration(totalDayDurationMs),
-        fmtDuration(actualWorkMs),
-        fmtDuration(s.totalBreakMs),
-        s.workType || "N/A",
-        s.status,
-      ];
-    });
-    
-    autoTable(doc, {
-      startY: 80,
-      head: [["Date", "Clock In", "Clock Out", "Total Day Duration", "Actual Work", "Breaks", "Work Type", "Status"]],
-      body: tableData,
-      theme: "grid",
-      styles: { fontSize: 8, cellPadding: 3 },
-    });
-
-    // Add total work time
-    const finalY = (doc as any).lastAutoTable.finalY + 20;
-    doc.setFontSize(14);
-    doc.text(`Total Actual Work Time: ${fmtDuration(totalActualWorkMs)}`, 14, finalY);
-    
-    doc.save(`${employee.fullName.replace(/\s+/g, "_")}_report.pdf`);
-  };
-
+function Detail({ icon: Icon, label, value, mono }: { icon?: React.ElementType; label: string; value: string; mono?: boolean }) {
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center justify-between">
-            <span>{employee.fullName} - Full Report</span>
-            <Button onClick={exportPdf} className="gap-2">
-              <Download className="h-4 w-4" /> Export PDF
-            </Button>
-          </DialogTitle>
-        </DialogHeader>
-        
-        <div className="space-y-6">
-          {/* Employee Info */}
-          <Card className="p-4">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div>
-                <div className="text-sm text-muted-foreground">Full Name</div>
-                <div className="font-medium">{employee.fullName}</div>
-              </div>
-              <div>
-                <div className="text-sm text-muted-foreground">Email</div>
-                <div className="font-medium">{employee.email}</div>
-              </div>
-              <div>
-                <div className="text-sm text-muted-foreground">Department</div>
-                <div className="font-medium">{employee.department}</div>
-              </div>
-              <div>
-                <div className="text-sm text-muted-foreground">Type</div>
-                <div className="font-medium capitalize">{employee.employeeType}</div>
-              </div>
-            </div>
-          </Card>
-
-          {/* Summary Stats */}
-          <Card className="p-4">
-            <h3 className="font-medium mb-4">Summary</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="text-center p-4 border rounded-lg">
-                <div className="text-sm text-muted-foreground mb-1">Total Work Time</div>
-                <div className="text-2xl font-bold">{fmtDuration(stats.totalWorkMs)}</div>
-              </div>
-              <div className="text-center p-4 border rounded-lg">
-                <div className="text-sm text-muted-foreground mb-1">Total Break Time</div>
-                <div className="text-2xl font-bold">{fmtDuration(stats.totalBreakMs)}</div>
-              </div>
-              <div className="text-center p-4 border rounded-lg">
-                <div className="text-sm text-muted-foreground mb-1">Total Sessions</div>
-                <div className="text-2xl font-bold">{stats.employeeSessions.length}</div>
-              </div>
-            </div>
-          </Card>
-
-          {/* Last 7 Days Charts */}
-          <Card className="p-4">
-            <h3 className="font-medium mb-4">Last 7 Days</h3>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <div className="h-[300px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={stats.last7Days}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis dataKey="date" fontSize={12} />
-                    <YAxis fontSize={12} />
-                    <Tooltip />
-                    <Line type="monotone" dataKey="workHours" stroke="hsl(var(--primary))" strokeWidth={2} name="Work Hours" />
-                    <Line type="monotone" dataKey="breakHours" stroke="hsl(var(--warning))" strokeWidth={2} name="Break Hours" />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="h-[300px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={stats.last7Days}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis dataKey="date" fontSize={12} />
-                    <YAxis fontSize={12} />
-                    <Tooltip />
-                    <Bar dataKey="workHours" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="Work Hours" />
-                    <Bar dataKey="breakHours" fill="hsl(var(--warning))" radius={[4, 4, 0, 0]} name="Break Hours" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-          </Card>
-
-          {/* Session History */}
-          <Card className="p-4">
-            <h3 className="font-medium mb-4">Session History</h3>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Clock In</TableHead>
-                    <TableHead>Clock Out</TableHead>
-                    <TableHead>Total Day Duration</TableHead>
-                    <TableHead>Actual Work</TableHead>
-                    <TableHead>Breaks</TableHead>
-                    <TableHead>Work Type</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {stats.employeeSessions.slice().reverse().map((s) => {
-                    const { totalDayDurationMs, actualWorkMs } = calculateSessionDurations(s);
-                    return (
-                      <TableRow key={s.id}>
-                        <TableCell>{s.date}</TableCell>
-                        <TableCell>{s.clockIn ? new Date(s.clockIn).toLocaleTimeString() : "—"}</TableCell>
-                        <TableCell>{s.clockOut ? new Date(s.clockOut).toLocaleTimeString() : "—"}</TableCell>
-                        <TableCell>{fmtDuration(totalDayDurationMs)}</TableCell>
-                        <TableCell>{fmtDuration(actualWorkMs)}</TableCell>
-                        <TableCell>{fmtDuration(s.totalBreakMs)}</TableCell>
-                        <TableCell>{s.workType || "N/A"}</TableCell>
-                        <TableCell>
-                          <Badge variant={s.status === "approved" ? "outline" : s.status === "rejected" ? "destructive" : "secondary"}>
-                            {s.status}
-                          </Badge>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                  {!stats.employeeSessions.length && (
-                    <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">No sessions found</TableCell></TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </Card>
-        </div>
-      </DialogContent>
-    </Dialog>
+    <div className="flex items-start gap-1.5">
+      {Icon && <Icon className="h-3.5 w-3.5 text-muted-foreground mt-0.5 shrink-0" />}
+      <div>
+        <p className="text-[10px] text-muted-foreground uppercase tracking-wide">{label}</p>
+        <p className={`font-medium text-xs ${mono ? "font-mono" : ""}`}>{value}</p>
+      </div>
+    </div>
   );
-}
-
-function AddEmployeeDialog({ onAdded }: { onAdded: () => void }) {
-  const [open, setOpen] = useState(false);
-  const [form, setForm] = useState<EmployeeProfile>({
-    employeeId: "", fullName: "", email: "", mobile: "", department: "", employeeType: "permanent", active: true, createdAt: new Date().toISOString(),
-  });
-  const save = async () => {
-    if (!form.email || !form.fullName) return toast.error("Email & name required");
-    await api.upsertProfile(form);
-    await api.log({ actor: "admin", action: "employee.add", target: form.email });
-    toast.success("Employee added. They can now sign in once you create their Firebase account.");
-    setOpen(false);
-    onAdded();
-  };
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button className="gap-2"><Plus className="h-4 w-4" />Add employee</Button>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader><DialogTitle>Add employee</DialogTitle></DialogHeader>
-        <div className="grid sm:grid-cols-2 gap-3">
-          <Field label="Employee ID"><Input value={form.employeeId} onChange={(e) => setForm({ ...form, employeeId: e.target.value })} /></Field>
-          <Field label="Full name"><Input value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} /></Field>
-          <Field label="Email"><Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></Field>
-          <Field label="Mobile"><Input value={form.mobile} onChange={(e) => setForm({ ...form, mobile: e.target.value })} /></Field>
-          <Field label="Department"><Input value={form.department} onChange={(e) => setForm({ ...form, department: e.target.value })} /></Field>
-          <Field label="Type">
-            <Select value={form.employeeType} onValueChange={(v) => setForm({ ...form, employeeType: v as EmployeeProfile["employeeType"] })}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="permanent">Permanent</SelectItem>
-                <SelectItem value="contractual">Contractual</SelectItem>
-              </SelectContent>
-            </Select>
-          </Field>
-        </div>
-        <Button onClick={save} className="w-full mt-2">Save</Button>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return <div className="space-y-1.5"><Label>{label}</Label>{children}</div>;
 }
