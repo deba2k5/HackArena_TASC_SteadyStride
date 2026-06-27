@@ -153,9 +153,8 @@ def link_email(emp_id: str, req: LinkEmailReq, x_user_email: Optional[str] = Hea
 
 def _try_auto_process(ts: dict) -> dict:
     """
-    If a timesheet is pending_review but confidence ≥ 90% with all employees matched,
-    immediately promote it to processed, generate invoice, and auto-dispatch.
-    Returns the updated timesheet dict.
+    If a timesheet is pending_review but confidence ≥ 90% with all employees matched
+    and all records have valid working data, promote to processed + generate + dispatch invoice.
     """
     AUTO_DISPATCH_TH = float(os.getenv("AUTO_DISPATCH_THRESHOLD", 0.90))
     conf = float(ts.get("overall_confidence") or
@@ -166,18 +165,28 @@ def _try_auto_process(ts: dict) -> dict:
     records = ts.get("extracted_data", {}).get("records", [])
     if not records:
         return ts
+
     all_matched = all(r.get("match_status") == "matched" for r in records)
     if not all_matched:
+        return ts
+
+    # Require at least one record with usable hours/days
+    has_data = any(
+        (r.get("working_days") and int(r.get("working_days") or 0) > 0 and int(r.get("working_days") or 0) <= 31)
+        or (r.get("total_hours") and float(r.get("total_hours") or 0) > 0)
+        for r in records
+    )
+    if not has_data:
         return ts
 
     # Promote to processed
     col = get_collection("timesheets")
     updates = {
-        "status":       "processed",
-        "is_touchless": True,
-        "exceptions":   [],
+        "status":             "processed",
+        "is_touchless":       True,
+        "exceptions":         [],
         "overall_confidence": conf,
-        "auto_processed_at": datetime.utcnow().isoformat(),
+        "auto_processed_at":  datetime.utcnow().isoformat(),
     }
     col.update_one({"id": ts["id"]}, {"$set": updates})
     ts.update(updates)
@@ -186,10 +195,9 @@ def _try_auto_process(ts: dict) -> dict:
     existing_inv = get_collection("invoices").find_one({"timesheet_id": ts["id"]})
     if not existing_inv:
         inv = _generate_invoice(ts, "auto_process")
-        if inv:
+        if inv and inv.get("total_amount", 0) > 0:
             _auto_dispatch(inv["id"], "auto_process")
     else:
-        # Invoice exists but may not be dispatched yet
         if existing_inv.get("dispatch_status") != "dispatched":
             _auto_dispatch(existing_inv["id"], "auto_process")
 
