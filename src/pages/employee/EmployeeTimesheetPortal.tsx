@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { api, fmtAED } from "@/lib/api";
@@ -148,6 +148,9 @@ export default function EmployeeTimesheetPortal() {
   const [selectedInv, setSelectedInv] = useState<Invoice | null>(null);
   const [projectCode, setProjectCode] = useState("");
   const [workingDays, setWorkingDays] = useState("");
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [lastResult, setLastResult] = useState<Timesheet | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // ── Query form ────────────────────────────────────────────────────────────
   const [queryInvId, setQueryInvId] = useState("");
@@ -156,11 +159,14 @@ export default function EmployeeTimesheetPortal() {
 
   const uploadMutation = useMutation({
     mutationFn: (fd: FormData) => api.uploadTimesheet(fd),
-    onSuccess: () => {
-      toast.success("Timesheet submitted for processing.");
+    onSuccess: (data) => {
+      toast.success("Timesheet submitted — AI processing complete.");
       qc.invalidateQueries({ queryKey: ["timesheets"] });
+      qc.invalidateQueries({ queryKey: ["invoices"] });
       setTextContent("");
       setFile(null);
+      setImagePreview(null);
+      setLastResult(data as Timesheet);
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -181,10 +187,23 @@ export default function EmployeeTimesheetPortal() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const handleFileChange = (f: File | null) => {
+    setFile(f);
+    if (f && f.type.startsWith("image/")) {
+      setInputType("handwriting");
+      const reader = new FileReader();
+      reader.onload = (e) => setImagePreview(e.target?.result as string);
+      reader.readAsDataURL(f);
+    } else {
+      setImagePreview(null);
+    }
+  };
+
   const handleUpload = (e: React.FormEvent) => {
     e.preventDefault();
     if (!clientCode) { toast.warning("Your account is not linked to any client yet."); return; }
     if (!payPeriod) { toast.warning("Pay period is required."); return; }
+    if (inputType === "handwriting" && !file) { toast.warning("Please attach a handwritten image to use VLM extraction."); return; }
     const fd = new FormData();
     fd.append("client_code", clientCode);
     fd.append("pay_period", payPeriod);
@@ -337,12 +356,59 @@ export default function EmployeeTimesheetPortal() {
 
                 <div className="space-y-1.5">
                   <Label>Attach File <span className="text-muted-foreground text-xs">(Excel / PDF / Image / Handwritten scan)</span></Label>
-                  <Input type="file" accept=".xlsx,.xls,.pdf,.png,.jpg,.jpeg,.csv,.docx"
-                    onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
-                  {inputType === "handwriting" && (
-                    <p className="text-[11px] text-indigo-600 flex items-center gap-1">
-                      <Brain className="h-3 w-3" /> Groq Llama-4 Scout + Tesseract OCR will read your handwritten image
-                    </p>
+                  {inputType === "handwriting" ? (
+                    <div>
+                      {/* Drag-and-drop image zone */}
+                      <div
+                        className={`relative border-2 border-dashed rounded-xl transition-all cursor-pointer
+                          ${imagePreview ? "border-indigo-400 bg-indigo-500/5" : "border-border hover:border-indigo-300 hover:bg-indigo-500/3"}
+                        `}
+                        onClick={() => fileInputRef.current?.click()}
+                        onDragOver={(e) => e.preventDefault()}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          const dropped = e.dataTransfer.files?.[0];
+                          if (dropped) handleFileChange(dropped);
+                        }}
+                      >
+                        {imagePreview ? (
+                          <div className="relative">
+                            <img
+                              src={imagePreview}
+                              alt="Timesheet preview"
+                              className="w-full max-h-64 object-contain rounded-xl p-2"
+                            />
+                            <button
+                              type="button"
+                              onClick={(ev) => { ev.stopPropagation(); setFile(null); setImagePreview(null); }}
+                              className="absolute top-2 right-2 bg-background/90 border rounded-full h-6 w-6 flex items-center justify-center text-xs text-muted-foreground hover:text-red-500"
+                            >✕</button>
+                            <div className="px-3 pb-2 text-xs text-indigo-600 font-medium flex items-center gap-1">
+                              <Brain className="h-3 w-3" /> Ready — Groq Llama-4 Scout will extract all rows
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="py-8 flex flex-col items-center gap-2 text-muted-foreground">
+                            <Brain className="h-8 w-8 text-indigo-400" />
+                            <p className="text-sm font-medium text-indigo-600">Drop handwritten image here</p>
+                            <p className="text-xs">or click to browse — JPG, PNG, JPEG supported</p>
+                            <p className="text-[11px] text-muted-foreground mt-1">
+                              Groq Llama-4 Scout VLM reads Days · Basic · Deductions · Net Pay from the image
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept=".png,.jpg,.jpeg,.tiff,.bmp,.webp"
+                        className="hidden"
+                        onChange={(e) => handleFileChange(e.target.files?.[0] ?? null)}
+                      />
+                    </div>
+                  ) : (
+                    <Input type="file" accept=".xlsx,.xls,.pdf,.png,.jpg,.jpeg,.csv,.docx"
+                      onChange={(e) => handleFileChange(e.target.files?.[0] ?? null)} />
                   )}
                 </div>
                 <div className="space-y-1.5">
@@ -352,7 +418,7 @@ export default function EmployeeTimesheetPortal() {
                 </div>
 
                 {/* Pay estimate */}
-                {workingDays && (
+                {workingDays && inputType !== "handwriting" && (
                   <div className="sm:col-span-2 rounded-lg bg-indigo-500/5 border border-indigo-100 p-3 text-xs">
                     <p className="font-semibold text-indigo-700 mb-1">💡 Pay Estimate (Office Regulation Act)</p>
                     <p className="text-muted-foreground">
@@ -362,10 +428,79 @@ export default function EmployeeTimesheetPortal() {
                   </div>
                 )}
 
+                {/* AI Extraction Result — shown after handwriting submission */}
+                {lastResult && inputType === "handwriting" && (
+                  <div className="sm:col-span-2 rounded-xl border border-indigo-200 bg-indigo-500/5 p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-semibold text-indigo-700 flex items-center gap-1.5">
+                        <Brain className="h-4 w-4" /> Groq VLM Extraction Result
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                          (lastResult.overall_confidence ?? 0) >= 0.9
+                            ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"
+                        }`}>
+                          {(((lastResult.overall_confidence ?? lastResult.extracted_data?.overall_confidence) ?? 0) * 100).toFixed(0)}% confidence
+                        </span>
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                          lastResult.status === "processed"
+                            ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"
+                        }`}>
+                          {lastResult.status === "processed" ? "✓ Auto-dispatched" : lastResult.status.replace(/_/g, " ")}
+                        </span>
+                      </div>
+                    </div>
+                    {/* Extracted rows table */}
+                    {(lastResult.extracted_data?.records?.length ?? 0) > 0 && (
+                      <div className="overflow-x-auto rounded-lg border bg-background">
+                        <table className="w-full text-xs">
+                          <thead>
+                            <tr className="border-b bg-muted/40">
+                              <th className="px-3 py-2 text-left font-semibold">Employee</th>
+                              <th className="px-3 py-2 text-right font-semibold">Days</th>
+                              <th className="px-3 py-2 text-right font-semibold">Basic</th>
+                              <th className="px-3 py-2 text-right font-semibold">Deductions</th>
+                              <th className="px-3 py-2 text-right font-semibold">Net Pay</th>
+                              <th className="px-3 py-2 text-center font-semibold">Match</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {lastResult.extracted_data.records.map((r, i) => {
+                              const rec = r as Record<string, unknown>;
+                              return (
+                                <tr key={i} className="border-b last:border-0">
+                                  <td className="px-3 py-2 font-medium">
+                                    {(rec.matched_name ?? rec.employee_name ?? "—") as string}
+                                    {rec.matched_emp_id && <span className="text-muted-foreground ml-1 text-[10px]">({rec.matched_emp_id as string})</span>}
+                                  </td>
+                                  <td className="px-3 py-2 text-right">{(rec.working_days ?? "—") as string}</td>
+                                  <td className="px-3 py-2 text-right">{rec.basic_pay != null ? `AED ${Number(rec.basic_pay).toLocaleString()}` : "—"}</td>
+                                  <td className="px-3 py-2 text-right text-red-600">{rec.deductions != null ? `AED ${Number(rec.deductions).toLocaleString()}` : "—"}</td>
+                                  <td className="px-3 py-2 text-right font-bold text-green-700">{rec.net_pay != null ? `AED ${Number(rec.net_pay).toLocaleString()}` : "—"}</td>
+                                  <td className="px-3 py-2 text-center">
+                                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                                      rec.match_status === "matched" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+                                    }`}>{(rec.match_status ?? "unknown") as string}</span>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                    <button type="button" onClick={() => setLastResult(null)} className="text-xs text-muted-foreground hover:text-foreground">
+                      Dismiss
+                    </button>
+                  </div>
+                )}
+
                 <div className="sm:col-span-2 flex justify-end">
-                  <Button type="submit" disabled={uploadMutation.isPending || !employee} className="min-w-40 gap-1.5">
+                  <Button type="submit" disabled={uploadMutation.isPending || !employee || (inputType === "handwriting" && !file)} className="min-w-40 gap-1.5">
                     <Brain className="h-3.5 w-3.5" />
-                    {uploadMutation.isPending ? "Processing with AI…" : "Submit Timesheet"}
+                    {uploadMutation.isPending
+                      ? (inputType === "handwriting" ? "Reading with Llama-4 Scout…" : "Processing with AI…")
+                      : (inputType === "handwriting" ? "Submit & Extract with VLM" : "Submit Timesheet")}
                   </Button>
                 </div>
               </form>

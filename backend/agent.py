@@ -742,8 +742,43 @@ def generate_invoice(timesheet: dict) -> dict:
         if emp_id:
             emp = employees_col.find_one({"emp_id": emp_id, "is_demo_account": {"$ne": True}})
 
-        # Always calculate from Office Regulation Act: 500 AED/hr × 8 hrs/day
-        pay = calculate_project_pay(emp, rec)
+        # ── If record has VLM-extracted financial data, use it directly ──────
+        doc_net_pay  = rec.get("net_pay")
+        doc_basic    = rec.get("basic_pay")
+        doc_deduct   = rec.get("deductions", 0.0)
+
+        if doc_net_pay and float(doc_net_pay) > 0:
+            # Use VLM-extracted values — document states the amounts explicitly
+            net  = round(float(doc_net_pay), 2)
+            bas  = round(float(doc_basic or 0), 2)
+            ded  = round(float(doc_deduct or 0), 2)
+            rh   = working_days * STANDARD_HOURS
+            pay  = {
+                "regular_hours":    round(rh, 2),
+                "ot_hours":         ot_hours,
+                "regular_pay":      bas,
+                "ot_pay":           0.0,
+                "total_billable":   net,
+                "project_code":     str(rec.get("project_code") or "").upper().strip() or None,
+                "project_name":     None,
+                "project_max_pay":  None,
+                "project_max_days": None,
+                "cap_exceeded":     False,
+                "cap_violation":    None,
+                "basic":            bas,
+                "housing":          0.0,
+                "transport":        0.0,
+                "food":             0.0,
+                "phone":            0.0,
+                "gross":            net,
+                "ot_amount":        0.0,
+                "deductions":       ded,
+                "net_pay":          net,
+                "iban":             emp.get("iban", "") if emp else "",
+            }
+        else:
+            # Standard calculation: 500 AED/hr × 8 hrs/day
+            pay = calculate_project_pay(emp, rec)
 
         line = {
             "emp_id":        emp_id,
@@ -1122,8 +1157,26 @@ def extract_timesheet(text_content: str = None, file_name: str = None,
         vlm_result = groq_vlm_extract(file_bytes, extracted_text)
 
         # ── If VLM returned table_rows, use them directly ────────────────────
+        # Also handle case where VLM responds with legacy single-record format
         table_rows = vlm_result.get("table_rows", []) if vlm_result else []
         vlm_conf   = float(vlm_result.get("confidence", 0.7)) if vlm_result else 0.0
+
+        # If no table_rows but VLM has direct fields, wrap as single row
+        if not table_rows and vlm_result:
+            has_any = any(vlm_result.get(f) is not None
+                         for f in ("working_days","net_pay","basic_pay","employee_name","emp_id"))
+            if has_any:
+                table_rows = [{
+                    "employee_name": vlm_result.get("employee_name"),
+                    "emp_id":        vlm_result.get("emp_id"),
+                    "working_days":  vlm_result.get("working_days"),
+                    "ot_hours":      vlm_result.get("ot_hours", 0.0),
+                    "basic_pay":     vlm_result.get("basic_pay"),
+                    "deductions":    vlm_result.get("deductions", 0.0),
+                    "net_pay":       vlm_result.get("net_pay"),
+                    "project_code":  vlm_result.get("project_code"),
+                    "leave_days":    vlm_result.get("leave_days", 0),
+                }]
 
         if table_rows:
             # Parse portal context for emp_id / name to associate with rows
