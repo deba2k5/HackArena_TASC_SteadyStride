@@ -286,6 +286,22 @@ export const api = {
   async listAuditLogs(): Promise<TIAAuditLog[]> {
     return request(`/audit`);
   },
+
+  /** GET /api/invoices/{id}/salary-slip/{empId} — download salary slip PDF */
+  async downloadSalarySlip(invoiceId: string, empId: string): Promise<void> {
+    const res = await fetch(`${API_BASE}/invoices/${encodeURIComponent(invoiceId)}/salary-slip/${encodeURIComponent(empId)}`);
+    if (!res.ok) throw new Error(`API ${res.status}: ${await res.text()}`);
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = res.headers.get("Content-Disposition")?.match(/filename="?(.+?)"?$/)?.[1]
+      ?? `salary_slip_${empId}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  },
 };
 
 // ─── Formatting helpers ───────────────────────────────────────────────────────

@@ -211,16 +211,17 @@ use_mongo = False
 db_client = None
 mongo_db = None
 
+print(f"Connecting to MongoDB URI: {MONGODB_URI[:30]}...")
+
+# Single attempt — TLS on this machine requires the JSON fallback
 try:
-    print(f"Connecting to MongoDB URI: {MONGODB_URI[:30]}...")
     db_client = MongoClient(MONGODB_URI, serverSelectionTimeoutMS=2000)
-    # Ping
     db_client.admin.command('ping')
     mongo_db = db_client[MONGODB_DB]
     use_mongo = True
     print("Database: Connected successfully to MongoDB Atlas.")
 except Exception as e:
-    print(f"Database warning: Connection to MongoDB Atlas failed ({e}). Falling back to local JSON files.")
+    print(f"Database: Using local JSON fallback ({type(e).__name__}).")
     use_mongo = False
 
 

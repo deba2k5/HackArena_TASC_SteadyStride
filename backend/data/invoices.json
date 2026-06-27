@@ -1,1 +1,77 @@
-[]
+[
+  {
+    "id": "84bf641e-d4f7-4aa1-9b51-c3b994c73236",
+    "timesheet_id": "62c1ae6f-d48b-4301-845d-e13fefd8bbdf",
+    "client_code": "CL001",
+    "client_name": "Emirates Steel Industries LLC",
+    "pay_period": "June 2026",
+    "total_amount": 4500.0,
+    "currency": "AED",
+    "line_items": [
+      {
+        "emp_id": "EMP10001",
+        "employee_name": "Carlos Smith",
+        "working_days": 6,
+        "regular_hours": 48.0,
+        "ot_hours": 0.0,
+        "basic": 7000.0,
+        "housing": 1750.0,
+        "transport": 500.0,
+        "food": 300.0,
+        "phone": 200.0,
+        "gross": 9750.0,
+        "ot_amount": 0.0,
+        "deductions": 5250.0,
+        "reimbursements": [],
+        "net_pay": 4500.0,
+        "iban": "AE000000000000000010001",
+        "project_code": "P1",
+        "project_name": "Alpha Infrastructure",
+        "total_billable": 24000.0,
+        "cap_exceeded": false,
+        "cap_violation": null
+      },
+      {
+        "emp_id": "",
+        "employee_name": "OT Hours",
+        "working_days": 24,
+        "regular_hours": 0.0,
+        "ot_hours": 0.0,
+        "basic": 0.0,
+        "housing": 0.0,
+        "transport": 0.0,
+        "food": 0.0,
+        "phone": 0.0,
+        "gross": 0.0,
+        "ot_amount": 0.0,
+        "deductions": 0.0,
+        "reimbursements": [],
+        "net_pay": 0.0,
+        "iban": "",
+        "project_code": null,
+        "project_name": null,
+        "total_billable": 0.0,
+        "cap_exceeded": false,
+        "cap_violation": null
+      }
+    ],
+    "generated_at": "2026-06-27T17:59:09.974791",
+    "validation_status": "failed",
+    "validation_errors": [
+      {
+        "type": "missing_signature",
+        "field": "signature",
+        "message": "Timesheet missing required client approval signature.",
+        "severity": "error"
+      },
+      {
+        "type": "unmatched_employee",
+        "field": "emp_id",
+        "message": "'OT Hours' has no valid Emp ID \u2014 cannot process payroll.",
+        "severity": "error"
+      }
+    ],
+    "dispatch_status": "draft",
+    "_id": "8501494e-9c58-43e0-9103-bb05e51042df"
+  }
+]

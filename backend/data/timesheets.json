@@ -24,5 +24,2137 @@
     ],
     "is_touchless": false,
     "_id": "efcdc99b-f2b9-4ec9-b315-b64c28015ab4"
+  },
+  {
+    "id": "885b3612-1de6-453a-8bcd-c7fad1036256",
+    "client_code": "CL001",
+    "client_name": "Emirates Steel Industries LLC",
+    "pay_period": "June 2026",
+    "input_type": "email",
+    "file_name": null,
+    "status": "pending_review",
+    "uploaded_at": "2026-06-27T17:53:44.598958",
+    "uploaded_by": "client_portal",
+    "extracted_data": {
+      "records": [
+        {
+          "employee_name": "Working Days",
+          "working_days": 6,
+          "client_code": "CL001",
+          "pay_period": "June 2026",
+          "emp_id": "EMP10001",
+          "ot_hours": 0.0,
+          "project_code": "P1",
+          "hours_per_day": 6.0,
+          "total_hours": 36.0,
+          "client_name": "Emirates Steel Industries LLC",
+          "matched_emp_id": "EMP10001",
+          "matched_name": "Carlos Smith",
+          "match_status": "matched",
+          "confidence": 0.95,
+          "match_candidates": []
+        },
+        {
+          "employee_name": "OT Hours",
+          "working_days": 0,
+          "client_code": null,
+          "pay_period": "June 2026",
+          "matched_emp_id": null,
+          "matched_name": null,
+          "match_status": "ambiguous",
+          "confidence": 0.5,
+          "match_candidates": [
+            {
+              "emp_id": "EMP10001",
+              "name": "Carlos Smith",
+              "client_name": "Emirates Steel Industries LLC"
+            },
+            {
+              "emp_id": "EMP10002",
+              "name": "Ahmed Khan",
+              "client_name": "Emirates Steel Industries LLC"
+            },
+            {
+              "emp_id": "EMP10003",
+              "name": "Meera Al Rashid",
+              "client_name": "Emirates Steel Industries LLC"
+            },
+            {
+              "emp_id": "EMP10004",
+              "name": "Hana Al Farsi",
+              "client_name": "Emirates Steel Industries LLC"
+            },
+            {
+              "emp_id": "EMP10005",
+              "name": "Michael Al Farsi",
+              "client_name": "Emirates Steel Industries LLC"
+            },
+            {
+              "emp_id": "EMP10006",
+              "name": "Hassan Al Hamdan",
+              "client_name": "Emirates Steel Industries LLC"
+            },
+            {
+              "emp_id": "EMP10007",
+              "name": "Lakshmi Johnson",
+              "client_name": "Emirates Steel Industries LLC"
+            },
+            {
+              "emp_id": "EMP10008",
+              "name": "Abdullah Patel",
+              "client_name": "Emirates Steel Industries LLC"
+            },
+            {
+              "emp_id": "EMP10009",
+              "name": "Kumar Kumar",
+              "client_name": "Emirates Steel Industries LLC"
+            },
+            {
+              "emp_id": "EMP10010",
+              "name": "Noor Khan",
+              "client_name": "Emirates Steel Industries LLC"
+            },
+            {
+              "emp_id": "EMP10011",
+              "name": "Ravi Al Hamdan",
+              "client_name": "Emirates Steel Industries LLC"
+            },
+            {
+              "emp_id": "EMP10012",
+              "name": "David Al Rashid",
+              "client_name": "Emirates Steel Industries LLC"
+            },
+            {
+              "emp_id": "EMP10013",
+              "name": "Lakshmi Fernandez",
+              "client_name": "Emirates Steel Industries LLC"
+            },
+            {
+              "emp_id": "EMP10014",
+              "name": "Rajesh Al Zaabi",
+              "client_name": "Emirates Steel Industries LLC"
+            },
+            {
+              "emp_id": "EMP10015",
+              "name": "David Fernandez",
+              "client_name": "Emirates Steel Industries LLC"
+            },
+            {
+              "emp_id": "EMP10016",
+              "name": "Rajesh Patel",
+              "client_name": "Emirates Steel Industries LLC"
+            },
+            {
+              "emp_id": "EMP10017",
+              "name": "Elena Al Muhairi",
+              "client_name": "Emirates Steel Industries LLC"
+            },
+            {
+              "emp_id": "EMP10018",
+              "name": "David Patel",
+              "client_name": "Emirates Steel Industries LLC"
+            },
+            {
+              "emp_id": "EMP10019",
+              "name": "David Kumar",
+              "client_name": "Emirates Steel Industries LLC"
+            },
+            {
+              "emp_id": "EMP10020",
+              "name": "Rajesh Johnson",
+              "client_name": "Emirates Steel Industries LLC"
+            },
+            {
+              "emp_id": "EMP10021",
+              "name": "Sunita Williams",
+              "client_name": "Emaar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10022",
+              "name": "Elena Brown",
+              "client_name": "Emaar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10023",
+              "name": "Hana Johnson",
+              "client_name": "Emaar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10024",
+              "name": "Ravi Brown",
+              "client_name": "Emaar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10025",
+              "name": "Ahmed Gupta",
+              "client_name": "Emaar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10026",
+              "name": "Abdullah Menon",
+              "client_name": "Emaar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10027",
+              "name": "Michael Smith",
+              "client_name": "Emaar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10028",
+              "name": "Carlos Williams",
+              "client_name": "Emaar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10029",
+              "name": "Lakshmi Al Rashid",
+              "client_name": "Emaar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10030",
+              "name": "Maria Patel",
+              "client_name": "Emaar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10031",
+              "name": "Michael Williams",
+              "client_name": "Emaar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10032",
+              "name": "Hassan Patel",
+              "client_name": "Emaar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10033",
+              "name": "James Al Hamdan",
+              "client_name": "Emaar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10034",
+              "name": "Kumar Patel",
+              "client_name": "Emaar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10035",
+              "name": "Mohammed Williams",
+              "client_name": "Emaar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10036",
+              "name": "Sofia Brown",
+              "client_name": "Emaar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10037",
+              "name": "Sunita Menon",
+              "client_name": "Emaar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10038",
+              "name": "Sunita Singh",
+              "client_name": "Emaar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10039",
+              "name": "John Khan",
+              "client_name": "Emaar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10040",
+              "name": "Ahmed Patel",
+              "client_name": "Emaar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10041",
+              "name": "Sarah Al Rashid",
+              "client_name": "Dubai Airports FZE"
+            },
+            {
+              "emp_id": "EMP10042",
+              "name": "Sarah Gupta",
+              "client_name": "Dubai Airports FZE"
+            },
+            {
+              "emp_id": "EMP10043",
+              "name": "Abdullah Al Hamdan",
+              "client_name": "Dubai Airports FZE"
+            },
+            {
+              "emp_id": "EMP10044",
+              "name": "Rajesh Kumar",
+              "client_name": "Dubai Airports FZE"
+            },
+            {
+              "emp_id": "EMP10045",
+              "name": "Aisha Patel",
+              "client_name": "Dubai Airports FZE"
+            },
+            {
+              "emp_id": "EMP10046",
+              "name": "Sanjay Nair",
+              "client_name": "Dubai Airports FZE"
+            },
+            {
+              "emp_id": "EMP10047",
+              "name": "Hassan Brown",
+              "client_name": "Dubai Airports FZE"
+            },
+            {
+              "emp_id": "EMP10048",
+              "name": "Ana Al Rashid",
+              "client_name": "Dubai Airports FZE"
+            },
+            {
+              "emp_id": "EMP10049",
+              "name": "James Nair",
+              "client_name": "Dubai Airports FZE"
+            },
+            {
+              "emp_id": "EMP10050",
+              "name": "Sanjay Patel",
+              "client_name": "Dubai Airports FZE"
+            },
+            {
+              "emp_id": "EMP10051",
+              "name": "Sanjay Al Farsi",
+              "client_name": "Dubai Airports FZE"
+            },
+            {
+              "emp_id": "EMP10052",
+              "name": "Sofia Sharma",
+              "client_name": "Dubai Airports FZE"
+            },
+            {
+              "emp_id": "EMP10053",
+              "name": "Hana Reddy",
+              "client_name": "Dubai Airports FZE"
+            },
+            {
+              "emp_id": "EMP10054",
+              "name": "Hana Williams",
+              "client_name": "Dubai Airports FZE"
+            },
+            {
+              "emp_id": "EMP10055",
+              "name": "Kumar Reddy",
+              "client_name": "Dubai Airports FZE"
+            },
+            {
+              "emp_id": "EMP10056",
+              "name": "Michael Gupta",
+              "client_name": "Dubai Airports FZE"
+            },
+            {
+              "emp_id": "EMP10057",
+              "name": "Meera Al Hamdan",
+              "client_name": "Dubai Airports FZE"
+            },
+            {
+              "emp_id": "EMP10058",
+              "name": "Aisha Al Zaabi",
+              "client_name": "Dubai Airports FZE"
+            },
+            {
+              "emp_id": "EMP10059",
+              "name": "Hassan Johnson",
+              "client_name": "Dubai Airports FZE"
+            },
+            {
+              "emp_id": "EMP10060",
+              "name": "Sunita Al Hamdan",
+              "client_name": "Dubai Airports FZE"
+            },
+            {
+              "emp_id": "EMP10061",
+              "name": "Noor Al Hamdan",
+              "client_name": "ADNOC Distribution PJSC"
+            },
+            {
+              "emp_id": "EMP10062",
+              "name": "Ahmed Menon",
+              "client_name": "ADNOC Distribution PJSC"
+            },
+            {
+              "emp_id": "EMP10063",
+              "name": "Sunita Al Zaabi",
+              "client_name": "ADNOC Distribution PJSC"
+            },
+            {
+              "emp_id": "EMP10064",
+              "name": "Carlos Patel",
+              "client_name": "ADNOC Distribution PJSC"
+            },
+            {
+              "emp_id": "EMP10065",
+              "name": "Fatima Fernandez",
+              "client_name": "ADNOC Distribution PJSC"
+            },
+            {
+              "emp_id": "EMP10066",
+              "name": "Sanjay Singh",
+              "client_name": "ADNOC Distribution PJSC"
+            },
+            {
+              "emp_id": "EMP10067",
+              "name": "David Reddy",
+              "client_name": "ADNOC Distribution PJSC"
+            },
+            {
+              "emp_id": "EMP10068",
+              "name": "Sofia Al Hamdan",
+              "client_name": "ADNOC Distribution PJSC"
+            },
+            {
+              "emp_id": "EMP10069",
+              "name": "Mohammed Al Mansoori",
+              "client_name": "ADNOC Distribution PJSC"
+            },
+            {
+              "emp_id": "EMP10070",
+              "name": "Ravi Menon",
+              "client_name": "ADNOC Distribution PJSC"
+            },
+            {
+              "emp_id": "EMP10071",
+              "name": "Ana Al Muhairi",
+              "client_name": "ADNOC Distribution PJSC"
+            },
+            {
+              "emp_id": "EMP10072",
+              "name": "Aisha Al Zaabi",
+              "client_name": "ADNOC Distribution PJSC"
+            },
+            {
+              "emp_id": "EMP10073",
+              "name": "Noor Sharma",
+              "client_name": "ADNOC Distribution PJSC"
+            },
+            {
+              "emp_id": "EMP10074",
+              "name": "Abdullah Al Rashid",
+              "client_name": "ADNOC Distribution PJSC"
+            },
+            {
+              "emp_id": "EMP10075",
+              "name": "Sofia Sharma",
+              "client_name": "ADNOC Distribution PJSC"
+            },
+            {
+              "emp_id": "EMP10076",
+              "name": "Lakshmi Williams",
+              "client_name": "ADNOC Distribution PJSC"
+            },
+            {
+              "emp_id": "EMP10077",
+              "name": "Aisha Al Zaabi",
+              "client_name": "ADNOC Distribution PJSC"
+            },
+            {
+              "emp_id": "EMP10078",
+              "name": "Sanjay Williams",
+              "client_name": "ADNOC Distribution PJSC"
+            },
+            {
+              "emp_id": "EMP10079",
+              "name": "Lakshmi Al Zaabi",
+              "client_name": "ADNOC Distribution PJSC"
+            },
+            {
+              "emp_id": "EMP10080",
+              "name": "James Al Zaabi",
+              "client_name": "ADNOC Distribution PJSC"
+            },
+            {
+              "emp_id": "EMP10081",
+              "name": "Ahmed Kumar",
+              "client_name": "Majid Al Futtaim Retail LLC"
+            },
+            {
+              "emp_id": "EMP10082",
+              "name": "Hana Menon",
+              "client_name": "Majid Al Futtaim Retail LLC"
+            },
+            {
+              "emp_id": "EMP10083",
+              "name": "Fatima Khan",
+              "client_name": "Majid Al Futtaim Retail LLC"
+            },
+            {
+              "emp_id": "EMP10084",
+              "name": "Maria Al Farsi",
+              "client_name": "Majid Al Futtaim Retail LLC"
+            },
+            {
+              "emp_id": "EMP10085",
+              "name": "Yasmin Johnson",
+              "client_name": "Majid Al Futtaim Retail LLC"
+            },
+            {
+              "emp_id": "EMP10086",
+              "name": "John Khan",
+              "client_name": "Majid Al Futtaim Retail LLC"
+            },
+            {
+              "emp_id": "EMP10087",
+              "name": "Fatima Nair",
+              "client_name": "Majid Al Futtaim Retail LLC"
+            },
+            {
+              "emp_id": "EMP10088",
+              "name": "Sanjay Patel",
+              "client_name": "Majid Al Futtaim Retail LLC"
+            },
+            {
+              "emp_id": "EMP10089",
+              "name": "Omar Al Farsi",
+              "client_name": "Majid Al Futtaim Retail LLC"
+            },
+            {
+              "emp_id": "EMP10090",
+              "name": "Ravi Fernandez",
+              "client_name": "Majid Al Futtaim Retail LLC"
+            },
+            {
+              "emp_id": "EMP10091",
+              "name": "Sanjay Johnson",
+              "client_name": "Majid Al Futtaim Retail LLC"
+            },
+            {
+              "emp_id": "EMP10092",
+              "name": "Maria Al Hamdan",
+              "client_name": "Majid Al Futtaim Retail LLC"
+            },
+            {
+              "emp_id": "EMP10093",
+              "name": "Fatima Khan",
+              "client_name": "Majid Al Futtaim Retail LLC"
+            },
+            {
+              "emp_id": "EMP10094",
+              "name": "Fatima Menon",
+              "client_name": "Majid Al Futtaim Retail LLC"
+            },
+            {
+              "emp_id": "EMP10095",
+              "name": "Ali Gupta",
+              "client_name": "Majid Al Futtaim Retail LLC"
+            },
+            {
+              "emp_id": "EMP10096",
+              "name": "Priya Gupta",
+              "client_name": "Majid Al Futtaim Retail LLC"
+            },
+            {
+              "emp_id": "EMP10097",
+              "name": "Ali Khan",
+              "client_name": "Majid Al Futtaim Retail LLC"
+            },
+            {
+              "emp_id": "EMP10098",
+              "name": "Lakshmi Al Hamdan",
+              "client_name": "Majid Al Futtaim Retail LLC"
+            },
+            {
+              "emp_id": "EMP10099",
+              "name": "Mohammed Kumar",
+              "client_name": "Majid Al Futtaim Retail LLC"
+            },
+            {
+              "emp_id": "EMP10100",
+              "name": "Mohammed Fernandez",
+              "client_name": "Majid Al Futtaim Retail LLC"
+            },
+            {
+              "emp_id": "EMP10101",
+              "name": "Michael Khan",
+              "client_name": "Abu Dhabi Commercial Bank PJSC"
+            },
+            {
+              "emp_id": "EMP10102",
+              "name": "Sunita Gupta",
+              "client_name": "Abu Dhabi Commercial Bank PJSC"
+            },
+            {
+              "emp_id": "EMP10103",
+              "name": "James Gupta",
+              "client_name": "Abu Dhabi Commercial Bank PJSC"
+            },
+            {
+              "emp_id": "EMP10104",
+              "name": "Rajesh Khan",
+              "client_name": "Abu Dhabi Commercial Bank PJSC"
+            },
+            {
+              "emp_id": "EMP10105",
+              "name": "James Smith",
+              "client_name": "Abu Dhabi Commercial Bank PJSC"
+            },
+            {
+              "emp_id": "EMP10106",
+              "name": "Ali Kumar",
+              "client_name": "Abu Dhabi Commercial Bank PJSC"
+            },
+            {
+              "emp_id": "EMP10107",
+              "name": "Hana Menon",
+              "client_name": "Abu Dhabi Commercial Bank PJSC"
+            },
+            {
+              "emp_id": "EMP10108",
+              "name": "Sanjay Sharma",
+              "client_name": "Abu Dhabi Commercial Bank PJSC"
+            },
+            {
+              "emp_id": "EMP10109",
+              "name": "Rajesh Fernandez",
+              "client_name": "Abu Dhabi Commercial Bank PJSC"
+            },
+            {
+              "emp_id": "EMP10110",
+              "name": "Rajesh Patel",
+              "client_name": "Abu Dhabi Commercial Bank PJSC"
+            },
+            {
+              "emp_id": "EMP10111",
+              "name": "Aisha Al Hamdan",
+              "client_name": "Abu Dhabi Commercial Bank PJSC"
+            },
+            {
+              "emp_id": "EMP10112",
+              "name": "Yasmin Patel",
+              "client_name": "Abu Dhabi Commercial Bank PJSC"
+            },
+            {
+              "emp_id": "EMP10113",
+              "name": "John Kumar",
+              "client_name": "Abu Dhabi Commercial Bank PJSC"
+            },
+            {
+              "emp_id": "EMP10114",
+              "name": "Mohammed Williams",
+              "client_name": "Abu Dhabi Commercial Bank PJSC"
+            },
+            {
+              "emp_id": "EMP10115",
+              "name": "James Al Mansoori",
+              "client_name": "Abu Dhabi Commercial Bank PJSC"
+            },
+            {
+              "emp_id": "EMP10116",
+              "name": "Rajesh Nair",
+              "client_name": "Abu Dhabi Commercial Bank PJSC"
+            },
+            {
+              "emp_id": "EMP10117",
+              "name": "Elena Kumar",
+              "client_name": "Abu Dhabi Commercial Bank PJSC"
+            },
+            {
+              "emp_id": "EMP10118",
+              "name": "David Al Muhairi",
+              "client_name": "Abu Dhabi Commercial Bank PJSC"
+            },
+            {
+              "emp_id": "EMP10119",
+              "name": "Noor Gupta",
+              "client_name": "Abu Dhabi Commercial Bank PJSC"
+            },
+            {
+              "emp_id": "EMP10120",
+              "name": "Maria Sharma",
+              "client_name": "Abu Dhabi Commercial Bank PJSC"
+            },
+            {
+              "emp_id": "EMP10121",
+              "name": "Ali Brown",
+              "client_name": "DP World FZE"
+            },
+            {
+              "emp_id": "EMP10122",
+              "name": "Fatima Gupta",
+              "client_name": "DP World FZE"
+            },
+            {
+              "emp_id": "EMP10123",
+              "name": "Yasmin Patel",
+              "client_name": "DP World FZE"
+            },
+            {
+              "emp_id": "EMP10124",
+              "name": "Sofia Reddy",
+              "client_name": "DP World FZE"
+            },
+            {
+              "emp_id": "EMP10125",
+              "name": "Sunita Menon",
+              "client_name": "DP World FZE"
+            },
+            {
+              "emp_id": "EMP10126",
+              "name": "Maria Al Rashid",
+              "client_name": "DP World FZE"
+            },
+            {
+              "emp_id": "EMP10127",
+              "name": "Hana Smith",
+              "client_name": "DP World FZE"
+            },
+            {
+              "emp_id": "EMP10128",
+              "name": "Sanjay Reddy",
+              "client_name": "DP World FZE"
+            },
+            {
+              "emp_id": "EMP10129",
+              "name": "Meera Gupta",
+              "client_name": "DP World FZE"
+            },
+            {
+              "emp_id": "EMP10130",
+              "name": "Ravi Fernandez",
+              "client_name": "DP World FZE"
+            },
+            {
+              "emp_id": "EMP10131",
+              "name": "Sunita Khan",
+              "client_name": "DP World FZE"
+            },
+            {
+              "emp_id": "EMP10132",
+              "name": "Mohammed Nair",
+              "client_name": "DP World FZE"
+            },
+            {
+              "emp_id": "EMP10133",
+              "name": "Peter Kumar",
+              "client_name": "DP World FZE"
+            },
+            {
+              "emp_id": "EMP10134",
+              "name": "Sunita Smith",
+              "client_name": "DP World FZE"
+            },
+            {
+              "emp_id": "EMP10135",
+              "name": "Fatima Kumar",
+              "client_name": "DP World FZE"
+            },
+            {
+              "emp_id": "EMP10136",
+              "name": "Ravi Menon",
+              "client_name": "DP World FZE"
+            },
+            {
+              "emp_id": "EMP10137",
+              "name": "Meera Khan",
+              "client_name": "DP World FZE"
+            },
+            {
+              "emp_id": "EMP10138",
+              "name": "James Al Mansoori",
+              "client_name": "DP World FZE"
+            },
+            {
+              "emp_id": "EMP10139",
+              "name": "Sunita Singh",
+              "client_name": "DP World FZE"
+            },
+            {
+              "emp_id": "EMP10140",
+              "name": "Sunita Al Farsi",
+              "client_name": "DP World FZE"
+            },
+            {
+              "emp_id": "EMP10141",
+              "name": "Noor Al Zaabi",
+              "client_name": "Etihad Airways PJSC"
+            },
+            {
+              "emp_id": "EMP10142",
+              "name": "Priya Khan",
+              "client_name": "Etihad Airways PJSC"
+            },
+            {
+              "emp_id": "EMP10143",
+              "name": "Hana Al Farsi",
+              "client_name": "Etihad Airways PJSC"
+            },
+            {
+              "emp_id": "EMP10144",
+              "name": "John Al Rashid",
+              "client_name": "Etihad Airways PJSC"
+            },
+            {
+              "emp_id": "EMP10145",
+              "name": "Yasmin Kumar",
+              "client_name": "Etihad Airways PJSC"
+            },
+            {
+              "emp_id": "EMP10146",
+              "name": "Kumar Johnson",
+              "client_name": "Etihad Airways PJSC"
+            },
+            {
+              "emp_id": "EMP10147",
+              "name": "David Singh",
+              "client_name": "Etihad Airways PJSC"
+            },
+            {
+              "emp_id": "EMP10148",
+              "name": "Meera Brown",
+              "client_name": "Etihad Airways PJSC"
+            },
+            {
+              "emp_id": "EMP10149",
+              "name": "Carlos Al Mansoori",
+              "client_name": "Etihad Airways PJSC"
+            },
+            {
+              "emp_id": "EMP10150",
+              "name": "David Menon",
+              "client_name": "Etihad Airways PJSC"
+            },
+            {
+              "emp_id": "EMP10151",
+              "name": "Rajesh Kumar",
+              "client_name": "Etihad Airways PJSC"
+            },
+            {
+              "emp_id": "EMP10152",
+              "name": "Ravi Patel",
+              "client_name": "Etihad Airways PJSC"
+            },
+            {
+              "emp_id": "EMP10153",
+              "name": "Ali Menon",
+              "client_name": "Etihad Airways PJSC"
+            },
+            {
+              "emp_id": "EMP10154",
+              "name": "John Reddy",
+              "client_name": "Etihad Airways PJSC"
+            },
+            {
+              "emp_id": "EMP10155",
+              "name": "Noor Menon",
+              "client_name": "Etihad Airways PJSC"
+            },
+            {
+              "emp_id": "EMP10156",
+              "name": "David Williams",
+              "client_name": "Etihad Airways PJSC"
+            },
+            {
+              "emp_id": "EMP10157",
+              "name": "Ravi Menon",
+              "client_name": "Etihad Airways PJSC"
+            },
+            {
+              "emp_id": "EMP10158",
+              "name": "Hana Reddy",
+              "client_name": "Etihad Airways PJSC"
+            },
+            {
+              "emp_id": "EMP10159",
+              "name": "Noor Sharma",
+              "client_name": "Etihad Airways PJSC"
+            },
+            {
+              "emp_id": "EMP10160",
+              "name": "Noor Reddy",
+              "client_name": "Etihad Airways PJSC"
+            },
+            {
+              "emp_id": "EMP10161",
+              "name": "Sanjay Nair",
+              "client_name": "Aldar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10162",
+              "name": "David Menon",
+              "client_name": "Aldar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10163",
+              "name": "Ali Reddy",
+              "client_name": "Aldar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10164",
+              "name": "Yasmin Fernandez",
+              "client_name": "Aldar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10165",
+              "name": "Noor Al Muhairi",
+              "client_name": "Aldar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10166",
+              "name": "Carlos Al Rashid",
+              "client_name": "Aldar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10167",
+              "name": "Elena Reddy",
+              "client_name": "Aldar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10168",
+              "name": "Sarah Williams",
+              "client_name": "Aldar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10169",
+              "name": "James Al Zaabi",
+              "client_name": "Aldar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10170",
+              "name": "Fatima Al Hamdan",
+              "client_name": "Aldar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10171",
+              "name": "Lakshmi Al Hamdan",
+              "client_name": "Aldar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10172",
+              "name": "Peter Khan",
+              "client_name": "Aldar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10173",
+              "name": "Omar Johnson",
+              "client_name": "Aldar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10174",
+              "name": "Priya Kumar",
+              "client_name": "Aldar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10175",
+              "name": "Mohammed Khan",
+              "client_name": "Aldar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10176",
+              "name": "Abdullah Nair",
+              "client_name": "Aldar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10177",
+              "name": "Carlos Menon",
+              "client_name": "Aldar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10178",
+              "name": "Kumar Al Mansoori",
+              "client_name": "Aldar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10179",
+              "name": "James Khan",
+              "client_name": "Aldar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10180",
+              "name": "Sanjay Al Hamdan",
+              "client_name": "Aldar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10181",
+              "name": "Sunita Al Mansoori",
+              "client_name": "Transguard Group LLC"
+            },
+            {
+              "emp_id": "EMP10182",
+              "name": "Sarah Al Zaabi",
+              "client_name": "Transguard Group LLC"
+            },
+            {
+              "emp_id": "EMP10183",
+              "name": "Abdullah Singh",
+              "client_name": "Transguard Group LLC"
+            },
+            {
+              "emp_id": "EMP10184",
+              "name": "Ali Al Muhairi",
+              "client_name": "Transguard Group LLC"
+            },
+            {
+              "emp_id": "EMP10185",
+              "name": "Meera Patel",
+              "client_name": "Transguard Group LLC"
+            },
+            {
+              "emp_id": "EMP10186",
+              "name": "Kumar Al Rashid",
+              "client_name": "Transguard Group LLC"
+            },
+            {
+              "emp_id": "EMP10187",
+              "name": "Aisha Al Mansoori",
+              "client_name": "Transguard Group LLC"
+            },
+            {
+              "emp_id": "EMP10188",
+              "name": "Ana Menon",
+              "client_name": "Transguard Group LLC"
+            },
+            {
+              "emp_id": "EMP10189",
+              "name": "Sunita Gupta",
+              "client_name": "Transguard Group LLC"
+            },
+            {
+              "emp_id": "EMP10190",
+              "name": "Sanjay Smith",
+              "client_name": "Transguard Group LLC"
+            },
+            {
+              "emp_id": "EMP10191",
+              "name": "Hana Patel",
+              "client_name": "Transguard Group LLC"
+            },
+            {
+              "emp_id": "EMP10192",
+              "name": "James Al Muhairi",
+              "client_name": "Transguard Group LLC"
+            },
+            {
+              "emp_id": "EMP10193",
+              "name": "Lakshmi Al Muhairi",
+              "client_name": "Transguard Group LLC"
+            },
+            {
+              "emp_id": "EMP10194",
+              "name": "Peter Williams",
+              "client_name": "Transguard Group LLC"
+            },
+            {
+              "emp_id": "EMP10195",
+              "name": "Meera Gupta",
+              "client_name": "Transguard Group LLC"
+            },
+            {
+              "emp_id": "EMP10196",
+              "name": "Rajesh Gupta",
+              "client_name": "Transguard Group LLC"
+            },
+            {
+              "emp_id": "EMP10197",
+              "name": "Meera Al Muhairi",
+              "client_name": "Transguard Group LLC"
+            },
+            {
+              "emp_id": "EMP10198",
+              "name": "Priya Al Zaabi",
+              "client_name": "Transguard Group LLC"
+            },
+            {
+              "emp_id": "EMP10199",
+              "name": "Carlos Al Farsi",
+              "client_name": "Transguard Group LLC"
+            },
+            {
+              "emp_id": "EMP10200",
+              "name": "Omar Johnson",
+              "client_name": "Transguard Group LLC"
+            },
+            {
+              "emp_id": "EMP10001",
+              "name": "Carlos Smith",
+              "client_name": "Emirates Steel Industries LLC"
+            }
+          ],
+          "warning": "Ambiguous name 'OT Hours' matches 201 employees. Admin review required."
+        }
+      ],
+      "overall_confidence": 0.72,
+      "meta": {
+        "has_signature": false,
+        "has_stamp": false,
+        "is_handwritten": false,
+        "raw_text_extracted": "Emp ID: EMP10001\r\nEmployee Name: Carlos Smith\r\nClient: Emirates Steel Industries LLC (CL001)\r\nPay Period: June 2026\r\nWorking Days: 6\r\nOT Hours: 0\r\nProject Code: P1",
+        "pipeline": "bert-qa+heuristic",
+        "vlm_used": false,
+        "bert_used": true
+      }
+    },
+    "exceptions": [
+      "Ambiguous name 'OT Hours' matches 201 employees. Admin review required.",
+      "Missing required client signature."
+    ],
+    "is_touchless": false,
+    "_id": "7d069fa0-eb3d-4c8b-9fe6-37af1790e7c1"
+  },
+  {
+    "id": "62c1ae6f-d48b-4301-845d-e13fefd8bbdf",
+    "client_code": "CL001",
+    "client_name": "Emirates Steel Industries LLC",
+    "pay_period": "June 2026",
+    "input_type": "email",
+    "file_name": null,
+    "status": "processed",
+    "uploaded_at": "2026-06-27T17:57:07.807668",
+    "uploaded_by": "client_portal",
+    "extracted_data": {
+      "records": [
+        {
+          "employee_name": "Working Days",
+          "working_days": 6,
+          "client_code": "CL001",
+          "pay_period": "June 2026",
+          "emp_id": "EMP10001",
+          "ot_hours": 0,
+          "project_code": "P1",
+          "hours_per_day": 6,
+          "total_hours": 36,
+          "client_name": "Emirates Steel Industries LLC",
+          "matched_emp_id": "EMP10001",
+          "matched_name": "Carlos Smith",
+          "match_status": "matched",
+          "confidence": 1.0,
+          "match_candidates": []
+        },
+        {
+          "employee_name": "OT Hours",
+          "working_days": 0,
+          "client_code": null,
+          "pay_period": "June 2026",
+          "matched_emp_id": "",
+          "matched_name": null,
+          "match_status": "ambiguous",
+          "confidence": 0.5,
+          "match_candidates": [
+            {
+              "emp_id": "EMP10001",
+              "name": "Carlos Smith",
+              "client_name": "Emirates Steel Industries LLC"
+            },
+            {
+              "emp_id": "EMP10002",
+              "name": "Ahmed Khan",
+              "client_name": "Emirates Steel Industries LLC"
+            },
+            {
+              "emp_id": "EMP10003",
+              "name": "Meera Al Rashid",
+              "client_name": "Emirates Steel Industries LLC"
+            },
+            {
+              "emp_id": "EMP10004",
+              "name": "Hana Al Farsi",
+              "client_name": "Emirates Steel Industries LLC"
+            },
+            {
+              "emp_id": "EMP10005",
+              "name": "Michael Al Farsi",
+              "client_name": "Emirates Steel Industries LLC"
+            },
+            {
+              "emp_id": "EMP10006",
+              "name": "Hassan Al Hamdan",
+              "client_name": "Emirates Steel Industries LLC"
+            },
+            {
+              "emp_id": "EMP10007",
+              "name": "Lakshmi Johnson",
+              "client_name": "Emirates Steel Industries LLC"
+            },
+            {
+              "emp_id": "EMP10008",
+              "name": "Abdullah Patel",
+              "client_name": "Emirates Steel Industries LLC"
+            },
+            {
+              "emp_id": "EMP10009",
+              "name": "Kumar Kumar",
+              "client_name": "Emirates Steel Industries LLC"
+            },
+            {
+              "emp_id": "EMP10010",
+              "name": "Noor Khan",
+              "client_name": "Emirates Steel Industries LLC"
+            },
+            {
+              "emp_id": "EMP10011",
+              "name": "Ravi Al Hamdan",
+              "client_name": "Emirates Steel Industries LLC"
+            },
+            {
+              "emp_id": "EMP10012",
+              "name": "David Al Rashid",
+              "client_name": "Emirates Steel Industries LLC"
+            },
+            {
+              "emp_id": "EMP10013",
+              "name": "Lakshmi Fernandez",
+              "client_name": "Emirates Steel Industries LLC"
+            },
+            {
+              "emp_id": "EMP10014",
+              "name": "Rajesh Al Zaabi",
+              "client_name": "Emirates Steel Industries LLC"
+            },
+            {
+              "emp_id": "EMP10015",
+              "name": "David Fernandez",
+              "client_name": "Emirates Steel Industries LLC"
+            },
+            {
+              "emp_id": "EMP10016",
+              "name": "Rajesh Patel",
+              "client_name": "Emirates Steel Industries LLC"
+            },
+            {
+              "emp_id": "EMP10017",
+              "name": "Elena Al Muhairi",
+              "client_name": "Emirates Steel Industries LLC"
+            },
+            {
+              "emp_id": "EMP10018",
+              "name": "David Patel",
+              "client_name": "Emirates Steel Industries LLC"
+            },
+            {
+              "emp_id": "EMP10019",
+              "name": "David Kumar",
+              "client_name": "Emirates Steel Industries LLC"
+            },
+            {
+              "emp_id": "EMP10020",
+              "name": "Rajesh Johnson",
+              "client_name": "Emirates Steel Industries LLC"
+            },
+            {
+              "emp_id": "EMP10021",
+              "name": "Sunita Williams",
+              "client_name": "Emaar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10022",
+              "name": "Elena Brown",
+              "client_name": "Emaar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10023",
+              "name": "Hana Johnson",
+              "client_name": "Emaar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10024",
+              "name": "Ravi Brown",
+              "client_name": "Emaar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10025",
+              "name": "Ahmed Gupta",
+              "client_name": "Emaar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10026",
+              "name": "Abdullah Menon",
+              "client_name": "Emaar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10027",
+              "name": "Michael Smith",
+              "client_name": "Emaar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10028",
+              "name": "Carlos Williams",
+              "client_name": "Emaar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10029",
+              "name": "Lakshmi Al Rashid",
+              "client_name": "Emaar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10030",
+              "name": "Maria Patel",
+              "client_name": "Emaar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10031",
+              "name": "Michael Williams",
+              "client_name": "Emaar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10032",
+              "name": "Hassan Patel",
+              "client_name": "Emaar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10033",
+              "name": "James Al Hamdan",
+              "client_name": "Emaar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10034",
+              "name": "Kumar Patel",
+              "client_name": "Emaar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10035",
+              "name": "Mohammed Williams",
+              "client_name": "Emaar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10036",
+              "name": "Sofia Brown",
+              "client_name": "Emaar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10037",
+              "name": "Sunita Menon",
+              "client_name": "Emaar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10038",
+              "name": "Sunita Singh",
+              "client_name": "Emaar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10039",
+              "name": "John Khan",
+              "client_name": "Emaar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10040",
+              "name": "Ahmed Patel",
+              "client_name": "Emaar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10041",
+              "name": "Sarah Al Rashid",
+              "client_name": "Dubai Airports FZE"
+            },
+            {
+              "emp_id": "EMP10042",
+              "name": "Sarah Gupta",
+              "client_name": "Dubai Airports FZE"
+            },
+            {
+              "emp_id": "EMP10043",
+              "name": "Abdullah Al Hamdan",
+              "client_name": "Dubai Airports FZE"
+            },
+            {
+              "emp_id": "EMP10044",
+              "name": "Rajesh Kumar",
+              "client_name": "Dubai Airports FZE"
+            },
+            {
+              "emp_id": "EMP10045",
+              "name": "Aisha Patel",
+              "client_name": "Dubai Airports FZE"
+            },
+            {
+              "emp_id": "EMP10046",
+              "name": "Sanjay Nair",
+              "client_name": "Dubai Airports FZE"
+            },
+            {
+              "emp_id": "EMP10047",
+              "name": "Hassan Brown",
+              "client_name": "Dubai Airports FZE"
+            },
+            {
+              "emp_id": "EMP10048",
+              "name": "Ana Al Rashid",
+              "client_name": "Dubai Airports FZE"
+            },
+            {
+              "emp_id": "EMP10049",
+              "name": "James Nair",
+              "client_name": "Dubai Airports FZE"
+            },
+            {
+              "emp_id": "EMP10050",
+              "name": "Sanjay Patel",
+              "client_name": "Dubai Airports FZE"
+            },
+            {
+              "emp_id": "EMP10051",
+              "name": "Sanjay Al Farsi",
+              "client_name": "Dubai Airports FZE"
+            },
+            {
+              "emp_id": "EMP10052",
+              "name": "Sofia Sharma",
+              "client_name": "Dubai Airports FZE"
+            },
+            {
+              "emp_id": "EMP10053",
+              "name": "Hana Reddy",
+              "client_name": "Dubai Airports FZE"
+            },
+            {
+              "emp_id": "EMP10054",
+              "name": "Hana Williams",
+              "client_name": "Dubai Airports FZE"
+            },
+            {
+              "emp_id": "EMP10055",
+              "name": "Kumar Reddy",
+              "client_name": "Dubai Airports FZE"
+            },
+            {
+              "emp_id": "EMP10056",
+              "name": "Michael Gupta",
+              "client_name": "Dubai Airports FZE"
+            },
+            {
+              "emp_id": "EMP10057",
+              "name": "Meera Al Hamdan",
+              "client_name": "Dubai Airports FZE"
+            },
+            {
+              "emp_id": "EMP10058",
+              "name": "Aisha Al Zaabi",
+              "client_name": "Dubai Airports FZE"
+            },
+            {
+              "emp_id": "EMP10059",
+              "name": "Hassan Johnson",
+              "client_name": "Dubai Airports FZE"
+            },
+            {
+              "emp_id": "EMP10060",
+              "name": "Sunita Al Hamdan",
+              "client_name": "Dubai Airports FZE"
+            },
+            {
+              "emp_id": "EMP10061",
+              "name": "Noor Al Hamdan",
+              "client_name": "ADNOC Distribution PJSC"
+            },
+            {
+              "emp_id": "EMP10062",
+              "name": "Ahmed Menon",
+              "client_name": "ADNOC Distribution PJSC"
+            },
+            {
+              "emp_id": "EMP10063",
+              "name": "Sunita Al Zaabi",
+              "client_name": "ADNOC Distribution PJSC"
+            },
+            {
+              "emp_id": "EMP10064",
+              "name": "Carlos Patel",
+              "client_name": "ADNOC Distribution PJSC"
+            },
+            {
+              "emp_id": "EMP10065",
+              "name": "Fatima Fernandez",
+              "client_name": "ADNOC Distribution PJSC"
+            },
+            {
+              "emp_id": "EMP10066",
+              "name": "Sanjay Singh",
+              "client_name": "ADNOC Distribution PJSC"
+            },
+            {
+              "emp_id": "EMP10067",
+              "name": "David Reddy",
+              "client_name": "ADNOC Distribution PJSC"
+            },
+            {
+              "emp_id": "EMP10068",
+              "name": "Sofia Al Hamdan",
+              "client_name": "ADNOC Distribution PJSC"
+            },
+            {
+              "emp_id": "EMP10069",
+              "name": "Mohammed Al Mansoori",
+              "client_name": "ADNOC Distribution PJSC"
+            },
+            {
+              "emp_id": "EMP10070",
+              "name": "Ravi Menon",
+              "client_name": "ADNOC Distribution PJSC"
+            },
+            {
+              "emp_id": "EMP10071",
+              "name": "Ana Al Muhairi",
+              "client_name": "ADNOC Distribution PJSC"
+            },
+            {
+              "emp_id": "EMP10072",
+              "name": "Aisha Al Zaabi",
+              "client_name": "ADNOC Distribution PJSC"
+            },
+            {
+              "emp_id": "EMP10073",
+              "name": "Noor Sharma",
+              "client_name": "ADNOC Distribution PJSC"
+            },
+            {
+              "emp_id": "EMP10074",
+              "name": "Abdullah Al Rashid",
+              "client_name": "ADNOC Distribution PJSC"
+            },
+            {
+              "emp_id": "EMP10075",
+              "name": "Sofia Sharma",
+              "client_name": "ADNOC Distribution PJSC"
+            },
+            {
+              "emp_id": "EMP10076",
+              "name": "Lakshmi Williams",
+              "client_name": "ADNOC Distribution PJSC"
+            },
+            {
+              "emp_id": "EMP10077",
+              "name": "Aisha Al Zaabi",
+              "client_name": "ADNOC Distribution PJSC"
+            },
+            {
+              "emp_id": "EMP10078",
+              "name": "Sanjay Williams",
+              "client_name": "ADNOC Distribution PJSC"
+            },
+            {
+              "emp_id": "EMP10079",
+              "name": "Lakshmi Al Zaabi",
+              "client_name": "ADNOC Distribution PJSC"
+            },
+            {
+              "emp_id": "EMP10080",
+              "name": "James Al Zaabi",
+              "client_name": "ADNOC Distribution PJSC"
+            },
+            {
+              "emp_id": "EMP10081",
+              "name": "Ahmed Kumar",
+              "client_name": "Majid Al Futtaim Retail LLC"
+            },
+            {
+              "emp_id": "EMP10082",
+              "name": "Hana Menon",
+              "client_name": "Majid Al Futtaim Retail LLC"
+            },
+            {
+              "emp_id": "EMP10083",
+              "name": "Fatima Khan",
+              "client_name": "Majid Al Futtaim Retail LLC"
+            },
+            {
+              "emp_id": "EMP10084",
+              "name": "Maria Al Farsi",
+              "client_name": "Majid Al Futtaim Retail LLC"
+            },
+            {
+              "emp_id": "EMP10085",
+              "name": "Yasmin Johnson",
+              "client_name": "Majid Al Futtaim Retail LLC"
+            },
+            {
+              "emp_id": "EMP10086",
+              "name": "John Khan",
+              "client_name": "Majid Al Futtaim Retail LLC"
+            },
+            {
+              "emp_id": "EMP10087",
+              "name": "Fatima Nair",
+              "client_name": "Majid Al Futtaim Retail LLC"
+            },
+            {
+              "emp_id": "EMP10088",
+              "name": "Sanjay Patel",
+              "client_name": "Majid Al Futtaim Retail LLC"
+            },
+            {
+              "emp_id": "EMP10089",
+              "name": "Omar Al Farsi",
+              "client_name": "Majid Al Futtaim Retail LLC"
+            },
+            {
+              "emp_id": "EMP10090",
+              "name": "Ravi Fernandez",
+              "client_name": "Majid Al Futtaim Retail LLC"
+            },
+            {
+              "emp_id": "EMP10091",
+              "name": "Sanjay Johnson",
+              "client_name": "Majid Al Futtaim Retail LLC"
+            },
+            {
+              "emp_id": "EMP10092",
+              "name": "Maria Al Hamdan",
+              "client_name": "Majid Al Futtaim Retail LLC"
+            },
+            {
+              "emp_id": "EMP10093",
+              "name": "Fatima Khan",
+              "client_name": "Majid Al Futtaim Retail LLC"
+            },
+            {
+              "emp_id": "EMP10094",
+              "name": "Fatima Menon",
+              "client_name": "Majid Al Futtaim Retail LLC"
+            },
+            {
+              "emp_id": "EMP10095",
+              "name": "Ali Gupta",
+              "client_name": "Majid Al Futtaim Retail LLC"
+            },
+            {
+              "emp_id": "EMP10096",
+              "name": "Priya Gupta",
+              "client_name": "Majid Al Futtaim Retail LLC"
+            },
+            {
+              "emp_id": "EMP10097",
+              "name": "Ali Khan",
+              "client_name": "Majid Al Futtaim Retail LLC"
+            },
+            {
+              "emp_id": "EMP10098",
+              "name": "Lakshmi Al Hamdan",
+              "client_name": "Majid Al Futtaim Retail LLC"
+            },
+            {
+              "emp_id": "EMP10099",
+              "name": "Mohammed Kumar",
+              "client_name": "Majid Al Futtaim Retail LLC"
+            },
+            {
+              "emp_id": "EMP10100",
+              "name": "Mohammed Fernandez",
+              "client_name": "Majid Al Futtaim Retail LLC"
+            },
+            {
+              "emp_id": "EMP10101",
+              "name": "Michael Khan",
+              "client_name": "Abu Dhabi Commercial Bank PJSC"
+            },
+            {
+              "emp_id": "EMP10102",
+              "name": "Sunita Gupta",
+              "client_name": "Abu Dhabi Commercial Bank PJSC"
+            },
+            {
+              "emp_id": "EMP10103",
+              "name": "James Gupta",
+              "client_name": "Abu Dhabi Commercial Bank PJSC"
+            },
+            {
+              "emp_id": "EMP10104",
+              "name": "Rajesh Khan",
+              "client_name": "Abu Dhabi Commercial Bank PJSC"
+            },
+            {
+              "emp_id": "EMP10105",
+              "name": "James Smith",
+              "client_name": "Abu Dhabi Commercial Bank PJSC"
+            },
+            {
+              "emp_id": "EMP10106",
+              "name": "Ali Kumar",
+              "client_name": "Abu Dhabi Commercial Bank PJSC"
+            },
+            {
+              "emp_id": "EMP10107",
+              "name": "Hana Menon",
+              "client_name": "Abu Dhabi Commercial Bank PJSC"
+            },
+            {
+              "emp_id": "EMP10108",
+              "name": "Sanjay Sharma",
+              "client_name": "Abu Dhabi Commercial Bank PJSC"
+            },
+            {
+              "emp_id": "EMP10109",
+              "name": "Rajesh Fernandez",
+              "client_name": "Abu Dhabi Commercial Bank PJSC"
+            },
+            {
+              "emp_id": "EMP10110",
+              "name": "Rajesh Patel",
+              "client_name": "Abu Dhabi Commercial Bank PJSC"
+            },
+            {
+              "emp_id": "EMP10111",
+              "name": "Aisha Al Hamdan",
+              "client_name": "Abu Dhabi Commercial Bank PJSC"
+            },
+            {
+              "emp_id": "EMP10112",
+              "name": "Yasmin Patel",
+              "client_name": "Abu Dhabi Commercial Bank PJSC"
+            },
+            {
+              "emp_id": "EMP10113",
+              "name": "John Kumar",
+              "client_name": "Abu Dhabi Commercial Bank PJSC"
+            },
+            {
+              "emp_id": "EMP10114",
+              "name": "Mohammed Williams",
+              "client_name": "Abu Dhabi Commercial Bank PJSC"
+            },
+            {
+              "emp_id": "EMP10115",
+              "name": "James Al Mansoori",
+              "client_name": "Abu Dhabi Commercial Bank PJSC"
+            },
+            {
+              "emp_id": "EMP10116",
+              "name": "Rajesh Nair",
+              "client_name": "Abu Dhabi Commercial Bank PJSC"
+            },
+            {
+              "emp_id": "EMP10117",
+              "name": "Elena Kumar",
+              "client_name": "Abu Dhabi Commercial Bank PJSC"
+            },
+            {
+              "emp_id": "EMP10118",
+              "name": "David Al Muhairi",
+              "client_name": "Abu Dhabi Commercial Bank PJSC"
+            },
+            {
+              "emp_id": "EMP10119",
+              "name": "Noor Gupta",
+              "client_name": "Abu Dhabi Commercial Bank PJSC"
+            },
+            {
+              "emp_id": "EMP10120",
+              "name": "Maria Sharma",
+              "client_name": "Abu Dhabi Commercial Bank PJSC"
+            },
+            {
+              "emp_id": "EMP10121",
+              "name": "Ali Brown",
+              "client_name": "DP World FZE"
+            },
+            {
+              "emp_id": "EMP10122",
+              "name": "Fatima Gupta",
+              "client_name": "DP World FZE"
+            },
+            {
+              "emp_id": "EMP10123",
+              "name": "Yasmin Patel",
+              "client_name": "DP World FZE"
+            },
+            {
+              "emp_id": "EMP10124",
+              "name": "Sofia Reddy",
+              "client_name": "DP World FZE"
+            },
+            {
+              "emp_id": "EMP10125",
+              "name": "Sunita Menon",
+              "client_name": "DP World FZE"
+            },
+            {
+              "emp_id": "EMP10126",
+              "name": "Maria Al Rashid",
+              "client_name": "DP World FZE"
+            },
+            {
+              "emp_id": "EMP10127",
+              "name": "Hana Smith",
+              "client_name": "DP World FZE"
+            },
+            {
+              "emp_id": "EMP10128",
+              "name": "Sanjay Reddy",
+              "client_name": "DP World FZE"
+            },
+            {
+              "emp_id": "EMP10129",
+              "name": "Meera Gupta",
+              "client_name": "DP World FZE"
+            },
+            {
+              "emp_id": "EMP10130",
+              "name": "Ravi Fernandez",
+              "client_name": "DP World FZE"
+            },
+            {
+              "emp_id": "EMP10131",
+              "name": "Sunita Khan",
+              "client_name": "DP World FZE"
+            },
+            {
+              "emp_id": "EMP10132",
+              "name": "Mohammed Nair",
+              "client_name": "DP World FZE"
+            },
+            {
+              "emp_id": "EMP10133",
+              "name": "Peter Kumar",
+              "client_name": "DP World FZE"
+            },
+            {
+              "emp_id": "EMP10134",
+              "name": "Sunita Smith",
+              "client_name": "DP World FZE"
+            },
+            {
+              "emp_id": "EMP10135",
+              "name": "Fatima Kumar",
+              "client_name": "DP World FZE"
+            },
+            {
+              "emp_id": "EMP10136",
+              "name": "Ravi Menon",
+              "client_name": "DP World FZE"
+            },
+            {
+              "emp_id": "EMP10137",
+              "name": "Meera Khan",
+              "client_name": "DP World FZE"
+            },
+            {
+              "emp_id": "EMP10138",
+              "name": "James Al Mansoori",
+              "client_name": "DP World FZE"
+            },
+            {
+              "emp_id": "EMP10139",
+              "name": "Sunita Singh",
+              "client_name": "DP World FZE"
+            },
+            {
+              "emp_id": "EMP10140",
+              "name": "Sunita Al Farsi",
+              "client_name": "DP World FZE"
+            },
+            {
+              "emp_id": "EMP10141",
+              "name": "Noor Al Zaabi",
+              "client_name": "Etihad Airways PJSC"
+            },
+            {
+              "emp_id": "EMP10142",
+              "name": "Priya Khan",
+              "client_name": "Etihad Airways PJSC"
+            },
+            {
+              "emp_id": "EMP10143",
+              "name": "Hana Al Farsi",
+              "client_name": "Etihad Airways PJSC"
+            },
+            {
+              "emp_id": "EMP10144",
+              "name": "John Al Rashid",
+              "client_name": "Etihad Airways PJSC"
+            },
+            {
+              "emp_id": "EMP10145",
+              "name": "Yasmin Kumar",
+              "client_name": "Etihad Airways PJSC"
+            },
+            {
+              "emp_id": "EMP10146",
+              "name": "Kumar Johnson",
+              "client_name": "Etihad Airways PJSC"
+            },
+            {
+              "emp_id": "EMP10147",
+              "name": "David Singh",
+              "client_name": "Etihad Airways PJSC"
+            },
+            {
+              "emp_id": "EMP10148",
+              "name": "Meera Brown",
+              "client_name": "Etihad Airways PJSC"
+            },
+            {
+              "emp_id": "EMP10149",
+              "name": "Carlos Al Mansoori",
+              "client_name": "Etihad Airways PJSC"
+            },
+            {
+              "emp_id": "EMP10150",
+              "name": "David Menon",
+              "client_name": "Etihad Airways PJSC"
+            },
+            {
+              "emp_id": "EMP10151",
+              "name": "Rajesh Kumar",
+              "client_name": "Etihad Airways PJSC"
+            },
+            {
+              "emp_id": "EMP10152",
+              "name": "Ravi Patel",
+              "client_name": "Etihad Airways PJSC"
+            },
+            {
+              "emp_id": "EMP10153",
+              "name": "Ali Menon",
+              "client_name": "Etihad Airways PJSC"
+            },
+            {
+              "emp_id": "EMP10154",
+              "name": "John Reddy",
+              "client_name": "Etihad Airways PJSC"
+            },
+            {
+              "emp_id": "EMP10155",
+              "name": "Noor Menon",
+              "client_name": "Etihad Airways PJSC"
+            },
+            {
+              "emp_id": "EMP10156",
+              "name": "David Williams",
+              "client_name": "Etihad Airways PJSC"
+            },
+            {
+              "emp_id": "EMP10157",
+              "name": "Ravi Menon",
+              "client_name": "Etihad Airways PJSC"
+            },
+            {
+              "emp_id": "EMP10158",
+              "name": "Hana Reddy",
+              "client_name": "Etihad Airways PJSC"
+            },
+            {
+              "emp_id": "EMP10159",
+              "name": "Noor Sharma",
+              "client_name": "Etihad Airways PJSC"
+            },
+            {
+              "emp_id": "EMP10160",
+              "name": "Noor Reddy",
+              "client_name": "Etihad Airways PJSC"
+            },
+            {
+              "emp_id": "EMP10161",
+              "name": "Sanjay Nair",
+              "client_name": "Aldar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10162",
+              "name": "David Menon",
+              "client_name": "Aldar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10163",
+              "name": "Ali Reddy",
+              "client_name": "Aldar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10164",
+              "name": "Yasmin Fernandez",
+              "client_name": "Aldar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10165",
+              "name": "Noor Al Muhairi",
+              "client_name": "Aldar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10166",
+              "name": "Carlos Al Rashid",
+              "client_name": "Aldar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10167",
+              "name": "Elena Reddy",
+              "client_name": "Aldar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10168",
+              "name": "Sarah Williams",
+              "client_name": "Aldar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10169",
+              "name": "James Al Zaabi",
+              "client_name": "Aldar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10170",
+              "name": "Fatima Al Hamdan",
+              "client_name": "Aldar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10171",
+              "name": "Lakshmi Al Hamdan",
+              "client_name": "Aldar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10172",
+              "name": "Peter Khan",
+              "client_name": "Aldar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10173",
+              "name": "Omar Johnson",
+              "client_name": "Aldar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10174",
+              "name": "Priya Kumar",
+              "client_name": "Aldar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10175",
+              "name": "Mohammed Khan",
+              "client_name": "Aldar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10176",
+              "name": "Abdullah Nair",
+              "client_name": "Aldar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10177",
+              "name": "Carlos Menon",
+              "client_name": "Aldar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10178",
+              "name": "Kumar Al Mansoori",
+              "client_name": "Aldar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10179",
+              "name": "James Khan",
+              "client_name": "Aldar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10180",
+              "name": "Sanjay Al Hamdan",
+              "client_name": "Aldar Properties PJSC"
+            },
+            {
+              "emp_id": "EMP10181",
+              "name": "Sunita Al Mansoori",
+              "client_name": "Transguard Group LLC"
+            },
+            {
+              "emp_id": "EMP10182",
+              "name": "Sarah Al Zaabi",
+              "client_name": "Transguard Group LLC"
+            },
+            {
+              "emp_id": "EMP10183",
+              "name": "Abdullah Singh",
+              "client_name": "Transguard Group LLC"
+            },
+            {
+              "emp_id": "EMP10184",
+              "name": "Ali Al Muhairi",
+              "client_name": "Transguard Group LLC"
+            },
+            {
+              "emp_id": "EMP10185",
+              "name": "Meera Patel",
+              "client_name": "Transguard Group LLC"
+            },
+            {
+              "emp_id": "EMP10186",
+              "name": "Kumar Al Rashid",
+              "client_name": "Transguard Group LLC"
+            },
+            {
+              "emp_id": "EMP10187",
+              "name": "Aisha Al Mansoori",
+              "client_name": "Transguard Group LLC"
+            },
+            {
+              "emp_id": "EMP10188",
+              "name": "Ana Menon",
+              "client_name": "Transguard Group LLC"
+            },
+            {
+              "emp_id": "EMP10189",
+              "name": "Sunita Gupta",
+              "client_name": "Transguard Group LLC"
+            },
+            {
+              "emp_id": "EMP10190",
+              "name": "Sanjay Smith",
+              "client_name": "Transguard Group LLC"
+            },
+            {
+              "emp_id": "EMP10191",
+              "name": "Hana Patel",
+              "client_name": "Transguard Group LLC"
+            },
+            {
+              "emp_id": "EMP10192",
+              "name": "James Al Muhairi",
+              "client_name": "Transguard Group LLC"
+            },
+            {
+              "emp_id": "EMP10193",
+              "name": "Lakshmi Al Muhairi",
+              "client_name": "Transguard Group LLC"
+            },
+            {
+              "emp_id": "EMP10194",
+              "name": "Peter Williams",
+              "client_name": "Transguard Group LLC"
+            },
+            {
+              "emp_id": "EMP10195",
+              "name": "Meera Gupta",
+              "client_name": "Transguard Group LLC"
+            },
+            {
+              "emp_id": "EMP10196",
+              "name": "Rajesh Gupta",
+              "client_name": "Transguard Group LLC"
+            },
+            {
+              "emp_id": "EMP10197",
+              "name": "Meera Al Muhairi",
+              "client_name": "Transguard Group LLC"
+            },
+            {
+              "emp_id": "EMP10198",
+              "name": "Priya Al Zaabi",
+              "client_name": "Transguard Group LLC"
+            },
+            {
+              "emp_id": "EMP10199",
+              "name": "Carlos Al Farsi",
+              "client_name": "Transguard Group LLC"
+            },
+            {
+              "emp_id": "EMP10200",
+              "name": "Omar Johnson",
+              "client_name": "Transguard Group LLC"
+            },
+            {
+              "emp_id": "EMP10001",
+              "name": "Carlos Smith",
+              "client_name": "Emirates Steel Industries LLC"
+            }
+          ],
+          "warning": "Ambiguous name 'OT Hours' matches 201 employees. Admin review required.",
+          "ot_hours": 0,
+          "project_code": ""
+        }
+      ],
+      "overall_confidence": 1.0,
+      "meta": {
+        "has_signature": false,
+        "has_stamp": false,
+        "is_handwritten": false,
+        "raw_text_extracted": "Emp ID: EMP10001\r\nEmployee Name: Carlos Smith\r\nClient: Emirates Steel Industries LLC (CL001)\r\nPay Period: June 2026\r\nWorking Days: 6\r\nOT Hours: 0\r\nProject Code: P1",
+        "pipeline": "bert-qa+heuristic",
+        "vlm_used": false,
+        "bert_used": true
+      }
+    },
+    "exceptions": [],
+    "is_touchless": false,
+    "_id": "9f3aab62-c272-46b3-a8e9-cf91041af4c7",
+    "updatedAt": "2026-06-27T17:59:09.900952"
   }
 ]

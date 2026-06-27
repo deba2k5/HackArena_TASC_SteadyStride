@@ -18,7 +18,7 @@ import { toast } from "sonner";
 import {
   Upload, FileText, MessageSquare, Clock, DollarSign,
   CheckCircle2, AlertTriangle, Eye, RefreshCw, Send,
-  Calendar, User, Building2, Briefcase, Brain,
+  Calendar, User, Building2, Briefcase, Brain, Download,
 } from "lucide-react";
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
@@ -689,11 +689,25 @@ export default function EmployeeTimesheetPortal() {
                           <TableCell className="text-xs text-muted-foreground">
                             {new Date(inv.generated_at).toLocaleString()}
                           </TableCell>
-                          <TableCell className="text-right">
+                          <TableCell className="text-right flex items-center justify-end gap-1">
                             <Button variant="ghost" size="icon" className="h-8 w-8"
                               onClick={() => setSelectedInv(inv)}>
                               <Eye className="h-4 w-4" />
                             </Button>
+                            {employee?.emp_id && (
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-indigo-600 hover:text-indigo-800"
+                                title="Download Salary Slip (PDF)"
+                                onClick={async () => {
+                                  try {
+                                    await api.downloadSalarySlip(inv.id, employee.emp_id);
+                                    toast.success("Salary slip downloaded!");
+                                  } catch (e) {
+                                    toast.error("Failed to download salary slip");
+                                  }
+                                }}>
+                                <Download className="h-4 w-4" />
+                              </Button>
+                            )}
                           </TableCell>
                         </TableRow>
                       );
@@ -804,6 +818,24 @@ export default function EmployeeTimesheetPortal() {
                   </Badge>
                 </div>
               </div>
+
+              {/* Download my salary slip */}
+              {employee?.emp_id && (
+                <Button
+                  className="gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white"
+                  onClick={async () => {
+                    try {
+                      await api.downloadSalarySlip(selectedInv.id, employee.emp_id);
+                      toast.success("Salary slip PDF downloaded!");
+                    } catch {
+                      toast.error("Failed to download salary slip.");
+                    }
+                  }}
+                >
+                  <Download className="h-4 w-4" /> Download My Salary Slip (PDF)
+                </Button>
+              )}
+
               {selectedInv.line_items?.length > 0 && (
                 <div className="overflow-x-auto rounded-lg border">
                   <Table>
@@ -815,6 +847,7 @@ export default function EmployeeTimesheetPortal() {
                         <TableHead className="text-right">Basic</TableHead>
                         <TableHead className="text-right">Deductions</TableHead>
                         <TableHead className="text-right">Net Pay</TableHead>
+                        <TableHead className="text-center">Slip</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -828,6 +861,22 @@ export default function EmployeeTimesheetPortal() {
                             <TableCell className="text-right">{l.basic != null ? `AED ${Number(l.basic).toLocaleString()}` : "—"}</TableCell>
                             <TableCell className="text-right text-red-600">{l.deductions != null ? `AED ${Number(l.deductions).toLocaleString()}` : "—"}</TableCell>
                             <TableCell className="text-right font-bold text-green-700">{l.net_pay != null ? `AED ${Number(l.net_pay).toLocaleString()}` : "—"}</TableCell>
+                            <TableCell className="text-center">
+                              {l.emp_id && (
+                                <Button variant="ghost" size="icon" className="h-7 w-7 text-indigo-600"
+                                  title={`Download salary slip for ${l.emp_id}`}
+                                  onClick={async () => {
+                                    try {
+                                      await api.downloadSalarySlip(selectedInv.id, String(l.emp_id));
+                                      toast.success(`Salary slip for ${l.emp_id} downloaded!`);
+                                    } catch {
+                                      toast.error("Failed to download salary slip.");
+                                    }
+                                  }}>
+                                  <Download className="h-3.5 w-3.5" />
+                                </Button>
+                              )}
+                            </TableCell>
                           </TableRow>
                         );
                       })}

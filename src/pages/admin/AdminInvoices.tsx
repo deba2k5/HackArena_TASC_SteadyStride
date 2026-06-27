@@ -478,6 +478,7 @@ export default function AdminInvoices() {
                           <TableHead className="text-right">OT Amt</TableHead>
                           <TableHead className="text-right">Deductions</TableHead>
                           <TableHead className="text-right">Net Pay</TableHead>
+                          <TableHead className="text-center">Slip</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -534,6 +535,22 @@ export default function AdminInvoices() {
                                 ? `AED ${Number(item.gross_pay).toLocaleString()}`
                                 : "—"}
                             </TableCell>
+                            <TableCell className="text-center">
+                              {item.emp_id && (
+                                <Button variant="ghost" size="icon" className="h-7 w-7 text-indigo-600"
+                                  title={`Download salary slip for ${item.emp_id}`}
+                                  onClick={async () => {
+                                    try {
+                                      await api.downloadSalarySlip(selected.id, String(item.emp_id));
+                                      toast.success(`Salary slip for ${item.emp_id} downloaded!`);
+                                    } catch {
+                                      toast.error("Failed to download salary slip.");
+                                    }
+                                  }}>
+                                  <Download className="h-3.5 w-3.5" />
+                                </Button>
+                              )}
+                            </TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
@@ -566,6 +583,26 @@ export default function AdminInvoices() {
                     Override & Approve
                   </Button>
                 )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border-indigo-400 text-indigo-700 hover:bg-indigo-50 gap-1.5"
+                  onClick={async () => {
+                    const items = selected.line_items ?? [];
+                    let ok = 0;
+                    for (const li of items) {
+                      const empId = (li as Record<string, unknown>).emp_id;
+                      if (!empId) continue;
+                      try {
+                        await api.downloadSalarySlip(selected.id, String(empId));
+                        ok++;
+                      } catch { /* skip */ }
+                    }
+                    toast.success(`Downloaded ${ok} salary slip(s)`);
+                  }}
+                >
+                  <Download className="h-3.5 w-3.5" /> Download All Salary Slips
+                </Button>
                 <Button
                   variant="ghost"
                   size="sm"

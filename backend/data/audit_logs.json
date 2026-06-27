@@ -61,5 +61,71 @@
     "id": "hppab8vq91mqwl7h2i",
     "at": "2026-06-27T16:41:29.130Z",
     "_id": "33bbaddf-1ec1-47c2-9882-0dccc939c785"
+  },
+  {
+    "actor": "employee@gmail.com",
+    "action": "auth.signin",
+    "id": "pylrzw9qshmmqwn98ax",
+    "at": "2026-06-27T17:38:50.313Z",
+    "_id": "f9cfd5db-d356-4c9f-a42f-a1d017f10599"
+  },
+  {
+    "actor": "client_portal",
+    "action": "timesheet_ingested",
+    "target": "885b3612-1de6-453a-8bcd-c7fad1036256",
+    "at": "2026-06-27T17:53:44.607471",
+    "meta": {
+      "client_code": "CL001",
+      "status": "pending_review",
+      "overall_confidence": 0.72,
+      "is_touchless": false
+    },
+    "_id": "3b253fb2-7672-45d1-920b-ecaa835509d2",
+    "id": "3b253fb2-7672-45d1-920b-ecaa835509d2"
+  },
+  {
+    "actor": "client_portal",
+    "action": "timesheet_ingested",
+    "target": "62c1ae6f-d48b-4301-845d-e13fefd8bbdf",
+    "at": "2026-06-27T17:57:07.834850",
+    "meta": {
+      "client_code": "CL001",
+      "status": "pending_review",
+      "overall_confidence": 0.72,
+      "is_touchless": false
+    },
+    "_id": "c0d9f9d4-05c4-4617-9d48-dbb91da8980d",
+    "id": "c0d9f9d4-05c4-4617-9d48-dbb91da8980d"
+  },
+  {
+    "actor": "admin@gmail.com",
+    "action": "auth.signin",
+    "id": "pko0xtd5xhmmqwnxb3e",
+    "at": "2026-06-27T17:57:33.674Z",
+    "_id": "860232d1-9ae8-4076-9b78-6f25dacc2ec0"
+  },
+  {
+    "actor": "finops_agent",
+    "action": "timesheet_hitl_resolved",
+    "target": "62c1ae6f-d48b-4301-845d-e13fefd8bbdf",
+    "at": "2026-06-27T17:59:09.915675",
+    "meta": {
+      "client_code": "CL001"
+    },
+    "_id": "bb297186-31f1-4eb2-a269-0fd7569a667d",
+    "id": "bb297186-31f1-4eb2-a269-0fd7569a667d"
+  },
+  {
+    "actor": "finops_agent",
+    "action": "invoice_generated",
+    "target": "84bf641e-d4f7-4aa1-9b51-c3b994c73236",
+    "at": "2026-06-27T17:59:10.006571",
+    "meta": {
+      "client_code": "CL001",
+      "validation_status": "failed",
+      "total_amount": 4500.0
+    },
+    "_id": "f91c898a-7f3d-44c1-a9d6-28a2afabc5cd",
+    "id": "f91c898a-7f3d-44c1-a9d6-28a2afabc5cd"
   }
 ]

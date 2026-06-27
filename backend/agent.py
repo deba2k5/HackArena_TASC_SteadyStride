@@ -501,32 +501,80 @@ def parse_heuristics(text: str) -> list:
                  "pay_period": period}]
     return []
 
-def merge_extraction(bert: dict, heuristic: list, vlm: dict) -> list:
+def merge_extraction(bert: dict, heuristic: list, vlm: dict,
+                     is_handwritten: bool = False) -> list:
     """
     Merge BERT, heuristics, and VLM into unified records.
-    Priority: portal structured fields > VLM vision > BERT text > heuristic fallback.
+    Priority (default):  portal structured fields > VLM vision > BERT > heuristic.
+    Priority (handwriting): VLM vision wins on ALL financial fields — portal has no
+    structured pay data so portal_protected is emptied.
+
+    When VLM returned multiple table_rows (multi-employee sheet), fan-out each row
+    as an individual record instead of collapsing.
     """
+    # ── Multi-row fan-out: if VLM table has >1 row, return each as its own record
+    if vlm:
+        vlm_rows = vlm.get("table_rows", [])
+        if isinstance(vlm_rows, list) and len(vlm_rows) > 1:
+            # Fan out each VLM row independently
+            fan_records = []
+            for row in vlm_rows:
+                rec = dict(row)
+                # Coerce numerics
+                for f in ("working_days", "leave_days"):
+                    if rec.get(f):
+                        try:
+                            v = int(str(rec[f]).split(".")[0])
+                            rec[f] = v if 1 <= v <= 31 else None
+                        except (ValueError, TypeError):
+                            rec[f] = None
+                for f in ("ot_hours", "net_pay", "basic_pay", "deductions"):
+                    if rec.get(f) is not None:
+                        try:
+                            rec[f] = float(str(rec[f]).replace(",", "").replace("AED", "").strip())
+                        except (ValueError, TypeError):
+                            rec[f] = None
+                if rec.get("deductions") is None:
+                    rec["deductions"] = 0.0
+                rec["is_handwritten"] = is_handwritten
+                if vlm.get("confidence"):
+                    rec["vlm_confidence"] = float(vlm["confidence"])
+                fan_records.append(rec)
+            return fan_records
+
     base = heuristic[0] if heuristic else {}
 
     # Merge BERT into base (only fill gaps)
-    for field in ("employee_name","emp_id","working_days","ot_hours","leave_days",
-                  "project_code","hours_per_day","total_hours","client_name","pay_period"):
+    for field in ("employee_name", "emp_id", "working_days", "ot_hours", "leave_days",
+                  "project_code", "hours_per_day", "total_hours", "client_name", "pay_period"):
         if not base.get(field) and bert.get(field):
             base[field] = bert[field]
 
     if vlm:
-        # Portal-supplied fields (from heuristic structured text) take priority
-        # for identity/key fields — VLM fills gaps only
-        portal_protected = {"emp_id", "working_days", "project_code"}
+        # For handwriting, VLM is the ONLY source for financial data — never protect.
+        # For portal text, protect identity fields from VLM overwrites.
+        portal_protected = set() if is_handwritten else {"emp_id", "working_days", "project_code"}
 
-        for field in ("employee_name","emp_id","working_days","ot_hours","leave_days",
-                      "project_code","hours_per_day","total_hours","client_name",
-                      "pay_period","reimbursements","remarks",
-                      "net_pay","basic_pay","deductions"):
-            vlm_val = vlm.get(field)
+        # Prefer VLM table_rows[0] for per-row fields (where VLM actually puts values)
+        vlm_row_src = {}
+        vlm_rows = vlm.get("table_rows", [])
+        if isinstance(vlm_rows, list) and len(vlm_rows) == 1:
+            vlm_row_src = vlm_rows[0]
+
+        for field in ("employee_name", "emp_id", "working_days", "ot_hours", "leave_days",
+                      "project_code", "hours_per_day", "total_hours", "client_name",
+                      "pay_period", "reimbursements", "remarks",
+                      "net_pay", "basic_pay", "deductions"):
+            # Financial fields come from table_rows[0]; identity fields from top-level vlm
+            if field in ("net_pay", "basic_pay", "deductions", "working_days",
+                         "ot_hours", "leave_days"):
+                vlm_val = vlm_row_src.get(field) if vlm_row_src else vlm.get(field)
+            else:
+                vlm_val = vlm.get(field) or (vlm_row_src.get(field) if vlm_row_src else None)
+
             if vlm_val in (None, "", [], {}):
                 continue
-            # Portal values protect identity/time fields
+            # Portal values protect identity/time fields (unless handwritten)
             if field in portal_protected and base.get(field) not in (None, "", [], {}):
                 continue
             base[field] = vlm_val
@@ -543,10 +591,10 @@ def merge_extraction(bert: dict, heuristic: list, vlm: dict) -> list:
             except (ValueError, TypeError):
                 base[f] = None
 
-    for f in ("ot_hours","hours_per_day","total_hours","net_pay","basic_pay","deductions"):
+    for f in ("ot_hours", "hours_per_day", "total_hours", "net_pay", "basic_pay", "deductions"):
         if base.get(f) is not None:
             try:
-                base[f] = float(str(base[f]).replace(",","").replace("AED","").strip())
+                base[f] = float(str(base[f]).replace(",", "").replace("AED", "").strip())
             except (ValueError, TypeError):
                 base[f] = None
 
@@ -556,6 +604,9 @@ def merge_extraction(bert: dict, heuristic: list, vlm: dict) -> list:
 
     if base.get("hours_per_day") and base.get("working_days") and not base.get("total_hours"):
         base["total_hours"] = round(base["hours_per_day"] * base["working_days"], 2)
+
+    if is_handwritten:
+        base["is_handwritten"] = True
 
     if not base:
         return []
@@ -734,7 +785,9 @@ def generate_invoice(timesheet: dict) -> dict:
         # Skip records with no usable data
         if not emp_name and not emp_id:
             continue
-        if working_days == 0 and not rec.get("total_hours"):
+        # Allow through if VLM explicitly provided net_pay even without working_days
+        has_vlm_pay = bool(rec.get("net_pay") and float(rec.get("net_pay") or 0) > 0)
+        if working_days == 0 and not rec.get("total_hours") and not has_vlm_pay:
             continue
 
         # Look up employee master (for IBAN only)
@@ -1249,7 +1302,8 @@ def extract_timesheet(text_content: str = None, file_name: str = None,
     heuristic_records = parse_heuristics(extracted_text) if extracted_text else []
 
     # ── Merge all signals ─────────────────────────────────────────────────────
-    merged = merge_extraction(bert_result, heuristic_records, vlm_result)
+    merged = merge_extraction(bert_result, heuristic_records, vlm_result,
+                               is_handwritten=is_handwritten)
 
     if not merged:
         # Absolute fallback — return empty record needing human review
@@ -1372,3 +1426,263 @@ def chat_assistant(query: str, client_code: str = None) -> str:
     return ("👋 TIA Assistant ready. Try:\n"
             "- *Show pipeline status*\n- *Exception queue*\n"
             "- *EMP10001 profile*\n- *Project regulation rules*")
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# STEP 8 — Per-Employee Salary Slip PDF Generation
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def generate_salary_slip_pdf(invoice: dict, emp_id: str) -> bytes:
+    """
+    Generate a professional salary slip PDF for a single employee from an invoice.
+    Returns raw PDF bytes (BytesIO content).
+    Uses reportlab for PDF rendering.
+    """
+    try:
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib import colors
+        from reportlab.lib.units import mm
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.platypus import (SimpleDocTemplate, Paragraph, Spacer,
+                                        Table, TableStyle, HRFlowable)
+        from reportlab.lib.enums import TA_LEFT, TA_CENTER, TA_RIGHT
+    except ImportError:
+        raise RuntimeError("reportlab is not installed. Run: pip install reportlab")
+
+    # ── Find the correct line item ────────────────────────────────────────────
+    line: dict = {}
+    for li in invoice.get("line_items", []):
+        if str(li.get("emp_id", "")).upper() == emp_id.upper():
+            line = dict(li)
+            break
+
+    if not line:
+        # Fallback: use first line item if emp_id not matched
+        items = invoice.get("line_items", [])
+        line = dict(items[0]) if items else {}
+
+    emp_name     = line.get("employee_name") or "—"
+    pay_period   = invoice.get("pay_period", "—")
+    client_name  = invoice.get("client_name", "—")
+    currency     = invoice.get("currency", "AED")
+    generated_at = invoice.get("generated_at", datetime.utcnow().isoformat())[:10]
+
+    # Pay components
+    basic      = float(line.get("basic") or 0)
+    housing    = float(line.get("housing") or 0)
+    transport  = float(line.get("transport") or 0)
+    food       = float(line.get("food") or 0)
+    phone      = float(line.get("phone") or 0)
+    ot_amount  = float(line.get("ot_amount") or 0)
+    gross      = float(line.get("gross") or (basic + housing + transport + food + phone + ot_amount))
+    deductions = float(line.get("deductions") or 0)
+    net_pay    = float(line.get("net_pay") or (gross - deductions))
+    working_days = line.get("working_days") or "—"
+    ot_hours     = float(line.get("ot_hours") or 0)
+    iban         = line.get("iban") or "—"
+    project_code = line.get("project_code") or "—"
+
+    # ── Build PDF ─────────────────────────────────────────────────────────────
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buf, pagesize=A4,
+        topMargin=18*mm, bottomMargin=18*mm,
+        leftMargin=20*mm, rightMargin=20*mm,
+    )
+
+    styles = getSampleStyleSheet()
+    PRIMARY   = colors.HexColor("#4F46E5")   # Indigo
+    DARK      = colors.HexColor("#1E1B4B")
+    LIGHT_BG  = colors.HexColor("#EEF2FF")
+    GREEN     = colors.HexColor("#16A34A")
+    RED       = colors.HexColor("#DC2626")
+    GRAY      = colors.HexColor("#6B7280")
+
+    h1 = ParagraphStyle("h1", parent=styles["Normal"],
+                         fontSize=22, textColor=PRIMARY, leading=28,
+                         fontName="Helvetica-Bold", spaceAfter=2)
+    h2 = ParagraphStyle("h2", parent=styles["Normal"],
+                         fontSize=11, textColor=DARK, leading=15,
+                         fontName="Helvetica-Bold")
+    sub = ParagraphStyle("sub", parent=styles["Normal"],
+                          fontSize=8.5, textColor=GRAY, leading=12)
+    body = ParagraphStyle("body", parent=styles["Normal"],
+                           fontSize=9.5, textColor=DARK, leading=14)
+    right_bold = ParagraphStyle("rb", parent=styles["Normal"],
+                                 fontSize=10, textColor=DARK,
+                                 fontName="Helvetica-Bold", alignment=TA_RIGHT)
+    green_big = ParagraphStyle("gb", parent=styles["Normal"],
+                                 fontSize=16, textColor=GREEN,
+                                 fontName="Helvetica-Bold", alignment=TA_RIGHT)
+
+    def cell(text, style=body, pad=(4, 6)):
+        return Paragraph(str(text), style)
+
+    elements = []
+
+    # ── Header ───────────────────────────────────────────────────────────────
+    header_data = [
+        [Paragraph("TASC SteadyStride", h1),
+         Paragraph(f"<font color='#4F46E5'>SALARY SLIP</font>", h1)],
+        [Paragraph("Touchless Invoice Agent Platform", sub),
+         Paragraph(f"Pay Period: <b>{pay_period}</b>", sub)],
+    ]
+    header_tbl = Table(header_data, colWidths=["60%", "40%"])
+    header_tbl.setStyle(TableStyle([
+        ("ALIGN", (1, 0), (1, -1), "RIGHT"),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
+    ]))
+    elements.append(header_tbl)
+    elements.append(HRFlowable(width="100%", thickness=2, color=PRIMARY, spaceAfter=8))
+
+    # ── Employee Details ──────────────────────────────────────────────────────
+    elements.append(Paragraph("EMPLOYEE DETAILS", h2))
+    elements.append(Spacer(1, 4))
+
+    emp_data = [
+        ["Employee Name", ":", emp_name,   "Employee ID", ":", emp_id.upper()],
+        ["Client",        ":", client_name, "Project",     ":", str(project_code)],
+        ["Pay Period",    ":", pay_period,  "Working Days",":", str(working_days)],
+        ["IBAN",          ":", iban,         "Generated On",":", generated_at],
+    ]
+    emp_tbl = Table(emp_data, colWidths=["18%", "3%", "29%", "18%", "3%", "29%"])
+    emp_tbl.setStyle(TableStyle([
+        ("FONTNAME",  (0, 0), (-1, -1), "Helvetica"),
+        ("FONTSIZE",  (0, 0), (-1, -1), 9),
+        ("FONTNAME",  (0, 0), (0, -1), "Helvetica-Bold"),
+        ("FONTNAME",  (3, 0), (3, -1), "Helvetica-Bold"),
+        ("TEXTCOLOR", (0, 0), (-1, -1), DARK),
+        ("TEXTCOLOR", (1, 0), (1, -1), GRAY),
+        ("TEXTCOLOR", (4, 0), (4, -1), GRAY),
+        ("ROWBACKGROUNDS", (0, 0), (-1, -1), [colors.white, LIGHT_BG]),
+        ("TOPPADDING",    (0, 0), (-1, -1), 5),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+        ("LEFTPADDING",   (0, 0), (-1, -1), 4),
+    ]))
+    elements.append(emp_tbl)
+    elements.append(Spacer(1, 12))
+
+    # ── Earnings Table ───────────────────────────────────────────────────────
+    elements.append(HRFlowable(width="100%", thickness=0.5, color=GRAY, spaceAfter=6))
+    elements.append(Paragraph("EARNINGS", h2))
+    elements.append(Spacer(1, 4))
+
+    earn_rows = [
+        ["Description", f"Amount ({currency})"],
+        ["Basic Pay",                       f"{basic:,.2f}"],
+    ]
+    if housing > 0:
+        earn_rows.append(["Housing Allowance",               f"{housing:,.2f}"])
+    if transport > 0:
+        earn_rows.append(["Transport Allowance",             f"{transport:,.2f}"])
+    if food > 0:
+        earn_rows.append(["Food Allowance",                  f"{food:,.2f}"])
+    if phone > 0:
+        earn_rows.append(["Phone Allowance",                 f"{phone:,.2f}"])
+    if ot_amount > 0:
+        earn_rows.append([f"Overtime ({ot_hours:.1f} hrs)",  f"{ot_amount:,.2f}"])
+    earn_rows.append(["Gross Earnings",                      f"{gross:,.2f}"])
+
+    earn_tbl = Table(earn_rows, colWidths=["70%", "30%"])
+    earn_ts = TableStyle([
+        ("FONTNAME",       (0, 0), (-1, 0),   "Helvetica-Bold"),
+        ("FONTNAME",       (0, 1), (-1, -2),  "Helvetica"),
+        ("FONTNAME",       (0, -1), (-1, -1), "Helvetica-Bold"),
+        ("FONTSIZE",       (0, 0), (-1, -1),  9),
+        ("ALIGN",          (1, 0), (1, -1),   "RIGHT"),
+        ("BACKGROUND",     (0, 0), (-1, 0),   PRIMARY),
+        ("TEXTCOLOR",      (0, 0), (-1, 0),   colors.white),
+        ("BACKGROUND",     (0, -1), (-1, -1), LIGHT_BG),
+        ("TEXTCOLOR",      (0, -1), (-1, -1), PRIMARY),
+        ("ROWBACKGROUNDS", (0, 1), (-1, -2),  [colors.white, colors.HexColor("#F9FAFB")]),
+        ("GRID",           (0, 0), (-1, -1),  0.3, GRAY),
+        ("TOPPADDING",     (0, 0), (-1, -1),  5),
+        ("BOTTOMPADDING",  (0, 0), (-1, -1),  5),
+        ("LEFTPADDING",    (0, 0), (-1, -1),  8),
+    ])
+    earn_tbl.setStyle(earn_ts)
+    elements.append(earn_tbl)
+    elements.append(Spacer(1, 10))
+
+    # ── Deductions Table ──────────────────────────────────────────────────────
+    if deductions > 0:
+        elements.append(Paragraph("DEDUCTIONS", h2))
+        elements.append(Spacer(1, 4))
+        ded_rows = [
+            ["Description", f"Amount ({currency})"],
+            ["Total Deductions", f"{deductions:,.2f}"],
+        ]
+        ded_tbl = Table(ded_rows, colWidths=["70%", "30%"])
+        ded_tbl.setStyle(TableStyle([
+            ("FONTNAME",   (0, 0), (-1, 0),   "Helvetica-Bold"),
+            ("FONTNAME",   (0, 1), (-1, -1),  "Helvetica"),
+            ("FONTSIZE",   (0, 0), (-1, -1),  9),
+            ("ALIGN",      (1, 0), (1, -1),   "RIGHT"),
+            ("BACKGROUND", (0, 0), (-1, 0),   colors.HexColor("#FEE2E2")),
+            ("TEXTCOLOR",  (0, 0), (-1, 0),   RED),
+            ("TEXTCOLOR",  (0, 1), (-1, 1),   RED),
+            ("GRID",       (0, 0), (-1, -1),  0.3, GRAY),
+            ("TOPPADDING", (0, 0), (-1, -1),  5),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+            ("LEFTPADDING", (0, 0), (-1, -1), 8),
+        ]))
+        elements.append(ded_tbl)
+        elements.append(Spacer(1, 10))
+
+    # ── Net Pay Highlight ─────────────────────────────────────────────────────
+    elements.append(HRFlowable(width="100%", thickness=1.5, color=GREEN, spaceAfter=6))
+    net_data = [
+        [Paragraph("<b>NET PAY</b>", h2),
+         Paragraph(f"{currency} {net_pay:,.2f}", green_big)],
+    ]
+    net_tbl = Table(net_data, colWidths=["50%", "50%"])
+    net_tbl.setStyle(TableStyle([
+        ("BACKGROUND",    (0, 0), (-1, -1), colors.HexColor("#F0FDF4")),
+        ("ROUNDEDCORNERS", (0, 0), (-1, -1), [4, 4, 4, 4]),
+        ("TOPPADDING",    (0, 0), (-1, -1), 10),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 10),
+        ("LEFTPADDING",   (0, 0), (-1, -1), 12),
+        ("RIGHTPADDING",  (0, 0), (-1, -1), 12),
+        ("BOX", (0, 0), (-1, -1), 1.5, GREEN),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+    ]))
+    elements.append(net_tbl)
+    elements.append(Spacer(1, 16))
+
+    # ── Summary Row ──────────────────────────────────────────────────────────
+    summary_data = [
+        ["Gross Earnings", "Deductions", "Net Pay"],
+        [f"{currency} {gross:,.2f}", f"{currency} {deductions:,.2f}", f"{currency} {net_pay:,.2f}"],
+    ]
+    sum_tbl = Table(summary_data, colWidths=["33.3%", "33.3%", "33.3%"])
+    sum_tbl.setStyle(TableStyle([
+        ("FONTNAME",      (0, 0), (-1, 0),   "Helvetica-Bold"),
+        ("FONTNAME",      (0, 1), (-1, 1),   "Helvetica"),
+        ("FONTSIZE",      (0, 0), (-1, -1),  9),
+        ("ALIGN",         (0, 0), (-1, -1),  "CENTER"),
+        ("BACKGROUND",    (0, 0), (-1, 0),   DARK),
+        ("TEXTCOLOR",     (0, 0), (-1, 0),   colors.white),
+        ("TEXTCOLOR",     (1, 1), (1, 1),    RED),
+        ("TEXTCOLOR",     (2, 1), (2, 1),    GREEN),
+        ("FONTNAME",      (2, 1), (2, 1),    "Helvetica-Bold"),
+        ("GRID",          (0, 0), (-1, -1),  0.3, GRAY),
+        ("TOPPADDING",    (0, 0), (-1, -1),  6),
+        ("BOTTOMPADDING", (0, 0), (-1, -1),  6),
+    ]))
+    elements.append(sum_tbl)
+    elements.append(Spacer(1, 20))
+
+    # ── Footer ────────────────────────────────────────────────────────────────
+    elements.append(HRFlowable(width="100%", thickness=0.5, color=GRAY, spaceAfter=4))
+    elements.append(Paragraph(
+        "This is a system-generated salary slip from TASC SteadyStride Touchless Invoice Agent. "
+        "No signature required. For queries, contact your HR administrator.",
+        ParagraphStyle("footer", parent=styles["Normal"], fontSize=7.5,
+                       textColor=GRAY, alignment=TA_CENTER, leading=11)
+    ))
+
+    doc.build(elements)
+    buf.seek(0)
+    return buf.read()
+

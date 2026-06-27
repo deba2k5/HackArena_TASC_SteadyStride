@@ -7,7 +7,7 @@ from typing import List, Optional
 
 from fastapi import FastAPI, UploadFile, File, Form, Header, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 import uvicorn, json
 
@@ -430,6 +430,32 @@ async def dispatch_invoices(x_user_email: Optional[str] = Header(None)):
         await notify("invoice_updated", inv)
         dispatched.append(inv)
     return clean_response({"status": "ok", "dispatched_count": len(dispatched), "invoices": dispatched})
+
+
+# ── Salary Slip PDF ───────────────────────────────────────────────────────────
+@app.get("/api/invoices/{id}/salary-slip/{emp_id}")
+def download_salary_slip(id: str, emp_id: str):
+    """Generate and stream a salary slip PDF for a single employee from an invoice."""
+    inv = get_collection("invoices").find_one({"id": id})
+    if not inv:
+        raise HTTPException(404, "Invoice not found")
+
+    # Remove MongoDB _id before passing to agent
+    inv.pop("_id", None)
+
+    try:
+        pdf_bytes = agent.generate_salary_slip_pdf(inv, emp_id)
+    except RuntimeError as e:
+        raise HTTPException(500, str(e))
+
+    period_slug = str(inv.get("pay_period", "slip")).replace(" ", "_")
+    filename = f"salary_slip_{emp_id.upper()}_{period_slug}.pdf"
+
+    return StreamingResponse(
+        iter([pdf_bytes]),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 # ═════════════════════════════════════════════════════════════════════════════
 # QUERIES
