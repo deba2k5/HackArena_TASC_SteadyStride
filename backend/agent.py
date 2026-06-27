@@ -177,24 +177,30 @@ def extract_text_from_pdf(file_bytes: bytes) -> str:
 # ═══════════════════════════════════════════════════════════════════════════════
 # STEP 3 — Groq Llama-4 Scout VLM (handwriting/image verification)
 # ═══════════════════════════════════════════════════════════════════════════════
-GROQ_VLM_PROMPT = """You are an enterprise invoice processing AI.
-Analyze this timesheet document image and extract the following as JSON:
+GROQ_VLM_PROMPT = """You are an enterprise payroll AI. Extract ONLY what is clearly visible in this handwritten/scanned timesheet image.
+
+Return JSON with these fields:
 {
-  "employee_name": "full name",
-  "emp_id": "EMP##### or null",
-  "working_days": <integer 1-31 or null>,
-  "ot_hours": <float or 0>,
-  "leave_days": <integer or 0>,
-  "project_code": "P1/P2/P3 or null",
-  "hours_per_day": <float or null>,
-  "total_hours": <float or null>,
+  "employee_name": "full name as written, or null",
+  "emp_id": "EMP##### format only, or null",
+  "working_days": <integer 1-31 ONLY — count of actual work days, NOT year/total hours, or null>,
+  "ot_hours": <float 0-100 only, overtime hours, or 0>,
+  "leave_days": <integer 0-31 or 0>,
+  "project_code": "ONLY one of: P1, P2, P3, or null — no other values",
+  "hours_per_day": <float 1-24 only, or null>,
+  "total_hours": <float 1-744 only, or null>,
   "client_name": "company name or null",
-  "pay_period": "Month Year or null",
-  "reimbursements": [{"amount": <float>, "reason": "string"}],
-  "remarks": "any notes",
-  "confidence": <float 0.0-1.0>
+  "pay_period": "Month YYYY format or null",
+  "reimbursements": [],
+  "remarks": "any notes or null",
+  "confidence": <float 0.0-1.0 — your confidence in the extraction>
 }
-Return ONLY valid JSON. If a field cannot be determined, use null."""
+
+CRITICAL RULES:
+- working_days MUST be between 1 and 31. If you cannot read it clearly, use null.
+- project_code MUST be exactly P1, P2, or P3. Any other value → null.
+- Do NOT invent values. If unclear, use null.
+- Return ONLY valid JSON, no explanation."""
 
 def groq_vlm_extract(image_bytes: bytes, ocr_text: str = "") -> dict:
     """
@@ -430,13 +436,35 @@ def merge_extraction(bert: dict, heuristic: list, vlm: dict) -> list:
         if not base.get(field) and bert.get(field):
             base[field] = bert[field]
 
-    # VLM overrides all (highest confidence)
+    # VLM overrides all (highest confidence) — EXCEPT when heuristic already
+    # has valid structured portal values for critical fields
     if vlm:
+        # Fields where portal context (heuristic) takes priority if already set
+        portal_protected = {"working_days", "emp_id", "project_code"}
         for field in ("employee_name","emp_id","working_days","ot_hours","leave_days",
                       "project_code","hours_per_day","total_hours","client_name",
                       "pay_period","reimbursements","remarks"):
-            if vlm.get(field) not in (None, "", [], {}):
-                base[field] = vlm[field]
+            vlm_val = vlm.get(field)
+            if vlm_val in (None, "", [], {}):
+                continue
+            # If heuristic already has a valid value for a protected field, keep it
+            if field in portal_protected and base.get(field) not in (None, "", [], {}):
+                continue
+            # Extra validation on VLM numeric fields
+            if field == "working_days":
+                try:
+                    v = int(str(vlm_val).split(".")[0])
+                    if not (1 <= v <= 31):
+                        continue  # discard out-of-range VLM value
+                    vlm_val = v
+                except (ValueError, TypeError):
+                    continue
+            if field == "project_code":
+                pm = re.search(r'\b(P[1-3])\b', str(vlm_val), re.I)
+                vlm_val = pm.group(1).upper() if pm else None
+                if not vlm_val:
+                    continue
+            base[field] = vlm_val
         # VLM confidence
         if vlm.get("confidence"):
             base["vlm_confidence"] = float(vlm["confidence"])
@@ -1021,7 +1049,8 @@ def extract_timesheet(text_content: str = None, file_name: str = None,
         if pil_img:
             ocr_text = run_tesseract_ocr(pil_img)
             if ocr_text:
-                extracted_text = ocr_text
+                # Prepend portal text_content so heuristics see structured fields first
+                extracted_text = (text_content + "\n\n" if text_content else "") + ocr_text
         # VLM on original bytes (higher quality for vision)
         vlm_result = groq_vlm_extract(file_bytes, extracted_text)
 
