@@ -147,9 +147,11 @@ export interface AuditLog {
   meta: Record<string, any>;
 }
 
+import { firebaseAuth } from "./firebase";
+
 // REST request helper
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const userEmail = localStorage.getItem("demo_user_email") || localStorage.getItem("user_email") || "demo@tia.system";
+  const userEmail = firebaseAuth.currentUser?.email || localStorage.getItem("user_email") || "demo@tia.system";
   const res = await fetch(`${API_BASE}${path}`, {
     headers: {
       "Content-Type": "application/json",
@@ -188,7 +190,7 @@ export const tiaApi = {
   },
 
   async uploadTimesheet(formData: FormData): Promise<Timesheet> {
-    const userEmail = localStorage.getItem("demo_user_email") || localStorage.getItem("user_email") || "demo@tia.system";
+    const userEmail = firebaseAuth.currentUser?.email || localStorage.getItem("user_email") || "demo@tia.system";
     const res = await fetch(`${API_BASE}/timesheets`, {
       method: "POST",
       body: formData,

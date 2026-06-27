@@ -6,87 +6,55 @@ from datetime import datetime
 import urllib.request
 from db import get_collection
 
-# Attempt to load Gemini API key
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+def extract_timesheet_with_bert(text: str, filename: str = None) -> list:
+    """Uses a local Hugging Face BERT variant (QA model) to extract timesheet records."""
+    try:
+        from transformers import pipeline
+    except ImportError:
+        print("transformers package not installed. Skipping local BERT extraction.")
+        return []
 
-def call_gemini(prompt: str, system_instruction: str = "") -> str:
-    """Helper to call Gemini API directly using urllib to avoid SDK issues."""
-    if not GEMINI_API_KEY:
-        return ""
+    # Initialize the QA pipeline with a pre-trained BERT variant (RoBERTa for QA)
+    # Note: In a production setting, this should be loaded once globally.
+    print("Loading local BERT variant (deepset/roberta-base-squad2) for extraction...")
+    qa_pipeline = pipeline("question-answering", model="deepset/roberta-base-squad2")
     
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
-    
-    # Structure payload
-    contents = []
-    if system_instruction:
-        contents.append({
-            "role": "user",
-            "parts": [{"text": f"System Instruction: {system_instruction}\n\nUser Input: {prompt}"}]
-        })
-    else:
-        contents.append({
-            "role": "user",
-            "parts": [{"text": prompt}]
-        })
-        
-    payload = {
-        "contents": contents,
-        "generationConfig": {
-            "responseMimeType": "application/json" if "json" in prompt.lower() or "json" in system_instruction.lower() else "text/plain"
-        }
+    questions = {
+        "employee_name": "What is the name of the employee?",
+        "emp_id": "What is the employee ID?",
+        "working_days": "How many days did the employee work?",
+        "ot_hours": "How many overtime hours?",
+        "leave_taken_days": "How many leave days were taken?",
+        "client_name": "What is the client or company name?",
+        "gross_payout_requested": "What is the gross payout amount?"
     }
     
-    try:
-        req = urllib.request.Request(
-            url,
-            data=json.dumps(payload).encode("utf-8"),
-            headers={"Content-Type": "application/json"},
-            method="POST"
-        )
-        with urllib.request.urlopen(req, timeout=10) as response:
-            res_data = json.loads(response.read().decode("utf-8"))
-            return res_data["candidates"][0]["content"]["parts"][0]["text"]
-    except Exception as e:
-        print(f"Gemini API call failed: {e}")
-        return ""
-
-def extract_timesheet_with_ai(text: str, filename: str = None) -> list:
-    """Uses Gemini if API key is present to extract timesheet records."""
-    system_instruction = """
-    You are an AI timesheet parser. Extract records from the text.
-    Return a JSON array of objects with the following schema:
-    [
-      {
-        "employee_name": "string or null",
-        "emp_id": "string or null",
-        "working_days": int or null,
-        "ot_hours": float or null,
-        "leave_taken_days": int or null,
-        "leave_comments": "string or null",
-        "client_name": "string or null",
-        "client_code": "string or null",
-        "pay_period": "string or null",
-        "gross_payout_requested": float or null,
-        "reimbursements": [
-           {"amount": float, "reason": "string"}
-        ]
-      }
-    ]
-    Extract all information accurately. If a field is not present, set it to null.
-    """
-    prompt = f"Extract from timesheet text (filename: {filename or 'email.txt'}):\n\n{text}"
-    response = call_gemini(prompt, system_instruction)
-    if response:
+    extracted_record = {}
+    
+    for key, question in questions.items():
         try:
-            # Strip markdown code blocks if any
-            clean_res = response.strip()
-            if clean_res.startswith("```json"):
-                clean_res = clean_res[7:]
-            if clean_res.endswith("```"):
-                clean_res = clean_res[:-3]
-            return json.loads(clean_res.strip())
-        except Exception:
-            pass
+            res = qa_pipeline(question=question, context=text)
+            # Thresholding for low confidence
+            if res['score'] > 0.1:
+                answer = res['answer']
+                
+                # Type casting
+                if key in ["working_days", "leave_taken_days"]:
+                    import re
+                    nums = re.findall(r'\d+', answer)
+                    extracted_record[key] = int(nums[0]) if nums else None
+                elif key in ["ot_hours", "gross_payout_requested"]:
+                    import re
+                    nums = re.findall(r'[\d\.]+', answer)
+                    extracted_record[key] = float(nums[0]) if nums else None
+                else:
+                    extracted_record[key] = answer.strip()
+        except Exception as e:
+            print(f"Error extracting {key} using BERT: {e}")
+            
+    if extracted_record.get("employee_name") or extracted_record.get("emp_id"):
+        return [extracted_record]
+        
     return []
 
 def parse_heuristics(text: str) -> list:
@@ -419,9 +387,8 @@ def extract_timesheet(text_content: str, file_name: str = None, file_bytes: byte
             except Exception as e:
                 print(f"PDF extract error: {e}")
                 
-        # Call Gemini if available, else heuristic fallback
-        if GEMINI_API_KEY:
-            extracted = extract_timesheet_with_ai(text, file_name)
+        # Extract using local Hugging Face BERT model
+        extracted = extract_timesheet_with_bert(text, file_name)
         
         if not extracted:
             extracted = parse_heuristics(text)
@@ -679,21 +646,7 @@ def chat_assistant(query: str, client_code: str = None) -> str:
     - Total Invoiced Value: {total_invoiced:.2f} AED
     """
     
-    # Check if Gemini API is available for natural Q&A
-    if GEMINI_API_KEY:
-        system_instruction = f"""
-        You are TIA AI, the context-aware Touchless Invoicing Assistant.
-        Answer user queries using the database context provided.
-        Be professional, concise, and structure responses with markdown tables if helpful.
-        Refer to specific records, clients, or stats.
-        
-        {context_summary}
-        """
-        response = call_gemini(query, system_instruction)
-        if response:
-            return response.strip()
-
-    # Rule-based conversational fallback if Gemini key is missing
+    # Conversational fallback via rule-based logic (since we replaced Gemini with local BERT)
     q_lower = query.lower()
     
     if "status" in q_lower or "summary" in q_lower or "overview" in q_lower:

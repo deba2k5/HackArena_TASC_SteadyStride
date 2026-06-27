@@ -1,221 +1,102 @@
-# Sinhas Track - Deployment Ready
+# Touchless Invoice Agent (TIA)
 
-Complete monorepo with independent frontend and backend services ready for Vercel deployment.
+**TIA** is a full-stack, Agentic AI-orchestrated pipeline designed to completely automate the end-to-end workflow of generating client invoices from raw, unstructured timesheet inputs. 
 
-## 📁 Project Structure
-
-```
-sinhastracker/
-├── frontend/                  ← React/Vite SPA
-│   ├── src/                   React components & pages
-│   ├── public/                Static assets
-│   ├── package.json
-│   ├── vite.config.ts
-│   ├── vercel.json           ✨ Vercel config
-│   ├── .env.example
-│   ├── build.sh
-│   └── README.md
-│
-├── backend/                   ← Python/Flask API
-│   ├── app.py                 Flask application
-│   ├── requirements.txt        Python dependencies
-│   ├── vercel.json           ✨ Vercel config
-│   ├── .env.example
-│   └── README.md
-│
-├── VERCEL_DEPLOYMENT_GUIDE.md ← Start here! 📖
-├── README.md
-└── .gitignore
-```
-
-## 🚀 Quick Start
-
-### 1. Prerequisites
-- GitHub account (free)
-- Vercel account (free)
-- MongoDB Atlas (free tier)
-
-### 2. Setup in 3 Steps
-
-**Step 1: MongoDB Atlas** (5 min)
-```
-1. Create cluster at mongodb.com/cloud/atlas
-2. Create user: workforce-admin
-3. Whitelist 0.0.0.0/0
-4. Copy connection string
-```
-
-**Step 2: Deploy Backend** (10 min)
-```
-1. Go to vercel.com
-2. Import repo
-3. Set Root Directory: backend
-4. Add MONGODB_URI env var
-5. Deploy!
-```
-
-**Step 3: Deploy Frontend** (10 min) ok
-```
-1. New Project on vercel.com
-2. Import repo
-3. Set Root Directory: frontend
-4. Add VITE_MONGODB_API_URL (backend URL)
-5. Deploy!
-```
-
-## 📖 Complete Deployment Guide
-
-See [VERCEL_DEPLOYMENT_GUIDE.md](./VERCEL_DEPLOYMENT_GUIDE.md) for detailed step-by-step instructions.
-
-## 🏗️ Architecture
-
-### Frontend
-- **Framework**: React 18 + TypeScript
-- **Build Tool**: Vite
-- **Styling**: Tailwind CSS + shadcn/ui
-- **Communication**: REST API + WebSocket
-
-### Backend
-- **Framework**: Python Flask 3.0
-- **Database**: MongoDB Atlas
-- **APIs**: RESTful endpoints
-- **Real-time**: Socket.IO (WebSocket)
-
-### Database
-- **Platform**: MongoDB Atlas
-- **Collections**: profiles, sessions, audit_logs
-- **Indexing**: Automatic on deploy
-
-## 🌐 Deployment Targets
-
-| Component | Platform | URL |
-|-----------|----------|-----|
-| Frontend | Vercel Static | https://sinhas-frontend.vercel.app |
-| Backend | Vercel Serverless | https://sinhas-backend.vercel.app |
-| Database | MongoDB Atlas | Cloud hosted |
-
-## 📊 Endpoints
-
-### Backend API
-```
-GET    /api/profiles              List all profiles
-GET    /api/profiles/:email       Get profile
-POST   /api/profiles              Create/Update
-DELETE /api/profiles/:email       Delete
-
-GET    /api/sessions              List sessions
-POST   /api/sessions              Clock in
-PATCH  /api/sessions/:id          Update session
-POST   /api/sessions/:id/breaks   Add break
-POST   /api/sessions/:id/locations  Log location
-
-GET    /api/audit                 Audit logs
-GET    /api/health                Health check
-```
-
-## 🔧 Environment Variables
-
-### Backend
-```
-MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net/workforce-vision
-GOOGLE_DRIVE_FOLDER_ID=your-folder-id
-ADMIN_EMAILS=admin@sinhas.ch
-FLASK_ENV=production
-```
-
-### Frontend
-```
-VITE_MONGODB_API_URL=https://your-backend.vercel.app/api
-VITE_WS_URL=https://your-backend.vercel.app
-VITE_GOOGLE_DRIVE_UPLOAD_URL=https://script.google.com/macros/s/YOUR_ID/exec
-VITE_ADMIN_EMAILS=admin@sinhas.ch
-```
-
-## 🚢 Deployment
-
-### Automatic
-- Push to GitHub
-- Vercel auto-deploys
-- No manual action needed
-
-### Manual CLI
-```bash
-npm i -g vercel
-vercel --prod
-```
-
-## ✅ Verification Checklist
-
-- [ ] MongoDB cluster created
-- [ ] Backend deployed to Vercel
-- [ ] Backend health check works
-- [ ] Frontend deployed to Vercel
-- [ ] Frontend loads without errors
-- [ ] API calls working
-- [ ] WebSocket connecting
-- [ ] Audit logs recording
-
-## 📚 Documentation
-
-- [VERCEL_DEPLOYMENT_GUIDE.md](./VERCEL_DEPLOYMENT_GUIDE.md) - Step-by-step deployment
-- [frontend/README.md](./frontend/README.md) - Frontend setup
-- [backend/README.md](./backend/README.md) - Backend setup
-
-## 🆘 Troubleshooting
-
-### Backend won't deploy
-- Check `backend/requirements.txt` exists
-- Verify Python version ≥ 3.8
-- Check build logs in Vercel
-
-### Frontend shows errors
-- Check environment variables set
-- Verify `VITE_MONGODB_API_URL` is correct
-- Check browser console for errors
-
-### API connection failing
-- Verify backend is running: `/api/health`
-- Check CORS is enabled
-- Verify environment variables
-
-### Database connection error
-- Check MONGODB_URI is correct
-- Verify IP whitelist includes 0.0.0.0/0
-- Check username/password
-
-## 📈 Performance
-
-- ✅ Global CDN
-- ✅ Auto-scaling
-- ✅ 99.95% uptime
-- ✅ SSL/HTTPS
-- ✅ Zero configuration
-
-## 🔐 Security
-
-- ✅ HTTPS only
-- ✅ Environment variables
-- ✅ CORS configured
-- ✅ Audit logging
-- ✅ MongoDB authentication
-
-## 🎯 Next Steps
-
-1. Read [VERCEL_DEPLOYMENT_GUIDE.md](./VERCEL_DEPLOYMENT_GUIDE.md)
-2. Setup MongoDB Atlas
-3. Deploy backend
-4. Deploy frontend
-5. Test integration
-6. Monitor in production
-
-## 📞 Support
-
-- **Frontend Issues**: See frontend/README.md
-- **Backend Issues**: See backend/README.md
-- **Deployment Issues**: See VERCEL_DEPLOYMENT_GUIDE.md
-- **Vercel Help**: vercel.com/docs
-- **MongoDB Help**: docs.mongodb.com
+Built for the **TASC HackArena: Steady Stride** challenge, this solution demonstrates how AI can replace manual data entry, human verification, and rules-based dispatching in complex payroll operations.
 
 ---
 
-**Ready to deploy? Start with [VERCEL_DEPLOYMENT_GUIDE.md](./VERCEL_DEPLOYMENT_GUIDE.md)** 🚀
+## 🚀 How It Works & Automation Pipeline
+
+The TIA pipeline is broken down into four major autonomous steps:
+
+### 1. Ingestion & Agentic Extraction
+Clients submit timesheets via multiple unstructured channels (e.g., pasting the body of a messy email, uploading a PDF, or an Excel file). 
+- **The Automation:** A Gemini-powered AI Agent (`agent.py`) intercepts the unstructured data and uses function calling and strict Pydantic schemas to intelligently extract the core intent: Employee Names, IDs, Working Days, Overtime Hours, and Leaves.
+- **Handling Ambiguity:** The agent acts as a fuzzy-matcher. If a client writes "John S." but the master database has "John Smith" and "John Snow", the AI flags an `ambiguity` and routes it to the FinOps Exception Queue. If it's a perfect match, it proceeds silently.
+
+### 2. Simulated ERP Payroll Processing
+Once the timesheet is structured and matched to valid employees in the master database, it enters the ERP calculation engine.
+- **The Automation:** The system automatically references the employee's Master Profile to pull their Basic, Housing, Transport, and Food allowances. It calculates their Overtime Amount, applies any simulated deductions, and computes the final Gross and Net Pay.
+- **Line Items:** The output is a fully formatted Invoice containing detailed Line Items for each employee.
+
+### 3. Business Rules Validation (BTP Profile)
+Before an invoice can be sent, it must pass the client's specific business rules.
+- **The Automation:** The validator engine checks the invoice against the `validation_profile` configured for that client. For example, if a client's rule is `max_ot_hours_limit = 20`, and an employee billed 25 OT hours, the invoice automatically fails validation and is flagged for Finance review.
+
+### 4. Dispatch & Tracking
+Invoices that pass validation are queued in the Dispatch Tracker.
+- **The Automation:** Finance can execute the dispatch runner with a single click. The runner automatically applies the client's `dispatch_rule` (e.g., "Sort descending by Net Pay") and pushes the invoices out to the client portal.
+- Clients can log into their portal, download the finalized CSV invoices, and raise query tickets if they spot discrepancies.
+
+---
+
+## 🏗️ Architecture & Detailed User Flow
+
+The application is built on a modern decoupled architecture (FastAPI Backend + React Frontend + Firebase Auth), featuring a seamless multi-persona user flow that allows the invoice to travel from creation to dispatch automatically. 
+
+Here is exactly how the **User Flow** works across the three distinct personas:
+
+### 1. The Client Persona (The Source)
+The workflow begins at the client level. Clients are external entities who need to submit payroll data.
+- **Action:** A client logs into the portal and navigates to the **Submit Timesheet** screen.
+- **Input Channels:** They can upload a raw, messy email text, an unstructured PDF, or a structured Excel file.
+- **Result:** They click "Submit". The file is sent to the backend where the **Local BERT Model** agentically extracts the hidden entities (Employee Names, Working Days, OT).
+- **Post-Dispatch:** Later in the flow, the client will use this same portal to view their finalized invoices and raise discrepancy tickets.
+
+### 2. The FinOps Persona (The Human-In-The-Loop)
+While the AI processes 90% of timesheets completely touchless, edge cases require human intervention.
+- **Action:** The FinOps operator logs into the **Approvals & Exceptions Dashboard**.
+- **The Queue:** Any timesheet where the BERT model scored low confidence, or where a name like "John S." matched multiple people in the master database (an **ambiguity**), lands in this queue.
+- **Resolution:** The FinOps operator sees the raw timesheet text side-by-side with the AI's extraction. They can select the correct employee from a dropdown of candidates and click "Approve". The timesheet then proceeds to the ERP engine for mathematical processing.
+
+### 3. The Finance Persona (The Dispatcher)
+Finance handles the high-level metrics and the final outgoing billing.
+- **Action:** The Finance operator logs into the **Analytics Dashboard**. Here they can monitor the Touchless Processing Rate (%) and total invoiced AED.
+- **Configuration:** Finance sets client-specific **Business Rules** (e.g., "Max OT Hours = 15"). The backend ERP engine applies these rules during generation. If a timesheet violates them, the generated invoice is marked as `failed` validation.
+- **Dispatch:** Finance navigates to the **Dispatch Tracker**, reviews the queued invoices that passed validation, and clicks **Execute Dispatch**. The invoices are automatically sorted according to the client's preferred rules (e.g., "Sort descending by Net Pay") and sent back to the Client portal!
+
+---
+
+## ⚙️ Setup & Installation
+
+### Prerequisites
+- Node.js (v18+)
+- Python (3.10+)
+
+### 1. Start the Backend
+Navigate to the `backend` directory, install the Python requirements, and start the FastAPI server:
+
+```bash
+cd backend
+python -m venv venv
+# On Windows: venv\Scripts\activate
+# On Mac/Linux: source venv/bin/activate
+pip install -r requirements.txt
+
+# Start the server on port 5000
+python app.py
+```
+
+### 2. Start the Frontend
+In a new terminal, navigate to the `frontend` directory, install dependencies, and start the Vite dev server:
+
+```bash
+cd frontend
+npm install
+npm run dev -- --port 5173
+```
+
+### 3. Seed the Database
+1. Open your browser to `http://localhost:5173`
+2. **Sign up / Sign in** using the Firebase authentication screen.
+3. Once logged in, click the **"Seed Master Database"** button in the top navigation bar. This will read the `TASC_Sample_Database_vF.xlsx` file and populate the system with the 10 clients and 200 employees required for the demo.
+
+### 4. Run the Demo!
+- **As a Client:** Go to "Submit Timesheet" and paste a messy email requesting payroll for an employee.
+- **As FinOps:** Switch personas (top right) to FinOps. Check the "Exception Queue" to see if the AI successfully extracted the data or if it needs manual confirmation.
+- **As Finance:** Switch to the Finance Dashboard. Go to "Dispatch & Tracking" and hit "Execute Dispatch" to finalize the invoice!
+
+---
+
+*Developed for the HackArena TASC Steady Stride Challenge.*
