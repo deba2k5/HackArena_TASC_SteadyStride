@@ -179,37 +179,41 @@ def extract_text_from_pdf(file_bytes: bytes) -> str:
 # ═══════════════════════════════════════════════════════════════════════════════
 GROQ_VLM_PROMPT = """You are an enterprise payroll AI reading a handwritten or scanned timesheet.
 
-Extract ALL visible fields and return ONLY this JSON (no other text):
+The document may contain a TABLE with multiple employee rows, or a single employee's details.
+
+Return ONLY this JSON (no other text):
 {
-  "employee_name": "full name or null",
-  "emp_id": "EMP##### or null",
-  "working_days": <integer 1-31 ONLY, or null>,
-  "ot_hours": <float 0-200 or 0>,
-  "leave_days": <integer 0-31 or 0>,
-  "project_code": "P1 or P2 or P3 or null — ONLY these values",
-  "hours_per_day": <float 1-24 or null>,
-  "total_hours": <float or null>,
+  "table_rows": [
+    {
+      "employee_name": "name or null",
+      "emp_id": "EMP##### or null",
+      "working_days": <integer 1-31 ONLY or null>,
+      "ot_hours": <float 0-200 or 0>,
+      "basic_pay": <float or null>,
+      "deductions": <float or 0>,
+      "net_pay": <float or null>,
+      "project_code": "P1 or P2 or P3 or null — ONLY these values",
+      "leave_days": <integer 0-31 or 0>
+    }
+  ],
   "client_name": "company name or null",
   "pay_period": "Month YYYY or null",
-  "basic_pay": <float — the basic/regular pay amount if shown, or null>,
-  "deductions": <float — any deductions shown, or 0>,
-  "net_pay": <float — the final net pay amount if explicitly shown, or null>,
-  "reimbursements": [],
-  "remarks": "any notes or null",
-  "confidence": <float 0.0-1.0>
+  "confidence": <float 0.0-1.0 — how confident you are in the reading>
 }
 
-STRICT RULES:
-1. working_days: count of actual working days only (1-31). NEVER a year like 2026.
-2. project_code: MUST be exactly "P1", "P2", or "P3". Anything else → null.
-3. basic_pay / net_pay: read the AED amounts written on the document if visible.
-4. If a field is not clearly readable, use null.
-5. Return ONLY the JSON object."""
+RULES:
+- Extract ALL rows you can see. If it is a table with 3 rows, return 3 objects in table_rows.
+- working_days: actual number of working days, MUST be 1-31. Never a year like 2026.
+- project_code: MUST be exactly "P1", "P2", or "P3" only. Anything else → null.
+- net_pay, basic_pay: read the AED amounts written. If a column header says "Net Pay" or "Basic", read the value in that column.
+- If a field is not visible or unclear, use null.
+- Return ONLY the JSON object, nothing else."""
 
 
 def groq_vlm_extract(image_bytes: bytes, ocr_text: str = "") -> dict:
     """
     Call Groq Llama-4 Scout VLM to extract timesheet data from an image.
+    Handles both single-record and multi-row table formats.
     Returns validated dict or empty dict on failure.
     """
     if not GROQ_API_KEY or GROQ_API_KEY.startswith("gsk_placeholder"):
@@ -229,7 +233,7 @@ def groq_vlm_extract(image_bytes: bytes, ocr_text: str = "") -> dict:
 
         prompt = GROQ_VLM_PROMPT
         if ocr_text:
-            prompt += f"\n\nOCR pre-read (use as hint, trust your vision over OCR):\n{ocr_text[:800]}"
+            prompt += f"\n\nOCR pre-read (use as reference, trust your vision):\n{ocr_text[:600]}"
 
         messages = [{
             "role": "user",
@@ -243,12 +247,12 @@ def groq_vlm_extract(image_bytes: bytes, ocr_text: str = "") -> dict:
             model="meta-llama/llama-4-scout-17b-16e-instruct",
             messages=messages,
             temperature=0.05,
-            max_completion_tokens=1024,
+            max_completion_tokens=2048,
             top_p=1,
             stream=False,
         )
         raw = completion.choices[0].message.content or ""
-        print(f"[Groq VLM] Raw: {raw[:400]}")
+        print(f"[Groq VLM] Raw: {raw[:600]}")
 
         # Extract JSON
         json_match = re.search(r'\{.*\}', raw, re.DOTALL)
@@ -258,44 +262,71 @@ def groq_vlm_extract(image_bytes: bytes, ocr_text: str = "") -> dict:
 
         result = json.loads(json_match.group(0))
 
-        # ── Post-extraction validation ─────────────────────────────────────────
-        # working_days: must be 1-31
-        wd = result.get("working_days")
-        if wd is not None:
-            try:
-                wd = int(str(wd).split(".")[0])
-                result["working_days"] = wd if 1 <= wd <= 31 else None
-            except (ValueError, TypeError):
-                result["working_days"] = None
+        # ── Validate table_rows ────────────────────────────────────────────────
+        rows = result.get("table_rows", [])
+        if not isinstance(rows, list):
+            rows = []
 
-        # project_code: must be P1/P2/P3
-        proj = result.get("project_code")
-        if proj:
-            pm = re.search(r'\b(P[1-3])\b', str(proj), re.I)
-            result["project_code"] = pm.group(1).upper() if pm else None
+        clean_rows = []
+        for row in rows:
+            if not isinstance(row, dict):
+                continue
 
-        # ot_hours: must be 0-200
-        ot = result.get("ot_hours")
-        if ot is not None:
-            try:
-                ot = float(ot)
-                result["ot_hours"] = ot if 0 <= ot <= 200 else 0.0
-            except (ValueError, TypeError):
-                result["ot_hours"] = 0.0
-
-        # net_pay, basic_pay, deductions: must be positive floats
-        for f in ("net_pay", "basic_pay", "deductions"):
-            val = result.get(f)
-            if val is not None:
+            # working_days: 1-31
+            wd = row.get("working_days")
+            if wd is not None:
                 try:
-                    fval = float(str(val).replace(",", "").replace("AED", "").strip())
-                    result[f] = fval if fval >= 0 else None
+                    wd = int(str(wd).split(".")[0])
+                    row["working_days"] = wd if 1 <= wd <= 31 else None
                 except (ValueError, TypeError):
-                    result[f] = None
+                    row["working_days"] = None
 
-        print(f"[Groq VLM] Validated: days={result.get('working_days')} "
-              f"ot={result.get('ot_hours')} proj={result.get('project_code')} "
-              f"net_pay={result.get('net_pay')} conf={result.get('confidence')}")
+            # project_code: P1/P2/P3 only
+            proj = row.get("project_code")
+            if proj:
+                pm = re.search(r'\b(P[1-3])\b', str(proj), re.I)
+                row["project_code"] = pm.group(1).upper() if pm else None
+
+            # ot_hours: 0-200
+            ot = row.get("ot_hours")
+            if ot is not None:
+                try:
+                    ot = float(ot)
+                    row["ot_hours"] = ot if 0 <= ot <= 200 else 0.0
+                except (ValueError, TypeError):
+                    row["ot_hours"] = 0.0
+            else:
+                row["ot_hours"] = 0.0
+
+            # monetary fields
+            for f in ("net_pay", "basic_pay", "deductions"):
+                val = row.get(f)
+                if val is not None:
+                    try:
+                        fval = float(str(val).replace(",", "").replace("AED", "").strip())
+                        row[f] = fval if fval >= 0 else None
+                    except (ValueError, TypeError):
+                        row[f] = None
+                if f == "deductions" and row.get(f) is None:
+                    row[f] = 0.0
+
+            # Must have at least working_days or net_pay to be useful
+            if row.get("working_days") or row.get("net_pay"):
+                clean_rows.append(row)
+
+        result["table_rows"] = clean_rows
+
+        # Validate top-level confidence
+        conf = result.get("confidence")
+        try:
+            result["confidence"] = float(conf) if conf is not None else 0.7
+        except (ValueError, TypeError):
+            result["confidence"] = 0.7
+
+        print(f"[Groq VLM] Extracted {len(clean_rows)} rows, conf={result.get('confidence')}")
+        for r in clean_rows:
+            print(f"  row: days={r.get('working_days')} basic={r.get('basic_pay')} "
+                  f"deduct={r.get('deductions')} net={r.get('net_pay')} proj={r.get('project_code')}")
         return result
 
     except Exception as e:
@@ -1081,13 +1112,81 @@ def extract_timesheet(text_content: str = None, file_name: str = None,
     # ── Image path: OpenCV → Tesseract → Groq VLM ────────────────────────────
     if IS_IMAGE and file_bytes:
         _, pil_img = preprocess_image_cv(file_bytes)
+        ocr_text = ""
         if pil_img:
             ocr_text = run_tesseract_ocr(pil_img)
-            if ocr_text:
-                # Prepend portal text_content so heuristics see structured fields first
-                extracted_text = (text_content + "\n\n" if text_content else "") + ocr_text
+        if ocr_text:
+            # Prepend portal text_content so heuristics see structured fields first
+            extracted_text = (text_content + "\n\n" if text_content else "") + ocr_text
         # VLM on original bytes (higher quality for vision)
         vlm_result = groq_vlm_extract(file_bytes, extracted_text)
+
+        # ── If VLM returned table_rows, use them directly ────────────────────
+        table_rows = vlm_result.get("table_rows", []) if vlm_result else []
+        vlm_conf   = float(vlm_result.get("confidence", 0.7)) if vlm_result else 0.0
+
+        if table_rows:
+            # Parse portal context for emp_id / name to associate with rows
+            ctx_emp_id, ctx_name = None, None
+            if text_content:
+                m = re.search(r"Emp\s+ID\s*:\s*(EMP\w+)", text_content, re.I)
+                if m: ctx_emp_id = m.group(1).upper()
+                m = re.search(r"Employee\s+Name\s*:\s*(.+)", text_content, re.I)
+                if m: ctx_name = m.group(1).strip().split("\n")[0]
+
+            period_m = re.search(
+                r"(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|"
+                r"Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|"
+                r"Dec(?:ember)?)\s*(202\d)", extracted_text or text_content or "", re.I)
+            pay_period = f"{period_m.group(1)} {period_m.group(2)}" if period_m else \
+                         vlm_result.get("pay_period", "June 2026")
+
+            records_from_vlm = []
+            for i, row in enumerate(table_rows):
+                records_from_vlm.append({
+                    "emp_id":        row.get("emp_id") or ctx_emp_id,
+                    "employee_name": row.get("employee_name") or ctx_name,
+                    "working_days":  row.get("working_days"),
+                    "ot_hours":      row.get("ot_hours", 0.0),
+                    "project_code":  row.get("project_code"),
+                    "leave_days":    row.get("leave_days", 0),
+                    "net_pay":       row.get("net_pay"),
+                    "basic_pay":     row.get("basic_pay"),
+                    "deductions":    row.get("deductions", 0.0),
+                    "pay_period":    pay_period,
+                    "client_name":   vlm_result.get("client_name"),
+                    "confidence":    round(min(1.0, vlm_conf + 0.02), 2),
+                    "is_handwritten": True,
+                    "vlm_confidence": vlm_conf,
+                })
+
+            matched = match_employees(records_from_vlm, client_code)
+
+            # Confidence scoring based on VLM confidence
+            for r in matched:
+                if r.get("match_status") == "matched":
+                    r["confidence"] = round(min(1.0, vlm_conf + 0.02), 2)
+                else:
+                    r["confidence"] = round(vlm_conf * 0.5, 2)
+
+            overall = round(sum(r.get("confidence", 0) for r in matched) / max(len(matched), 1), 2)
+
+            pipeline_used = ["opencv+tesseract", "groq-llama4-scout-table"]
+            return {
+                "records":            matched,
+                "overall_confidence": overall,
+                "meta": {
+                    "has_signature":      has_signature,
+                    "has_stamp":          has_stamp,
+                    "is_handwritten":     True,
+                    "raw_text_extracted": extracted_text[:500] if extracted_text else ocr_text[:500],
+                    "pipeline":           "+".join(pipeline_used),
+                    "vlm_used":           True,
+                    "bert_used":          False,
+                    "vlm_rows":           len(table_rows),
+                    "vlm_confidence":     vlm_conf,
+                }
+            }
 
     # ── BERT extraction on text ───────────────────────────────────────────────
     if extracted_text:
