@@ -631,11 +631,17 @@ def generate_invoice(timesheet: dict) -> dict:
     total_amount  = 0.0
 
     for rec in timesheet.get("extracted_data", {}).get("records", []):
-        emp_id     = rec.get("matched_emp_id")
+        emp_id     = rec.get("matched_emp_id") or rec.get("emp_id")
         emp_name   = rec.get("matched_name") or rec.get("employee_name")
-        working_days = rec.get("working_days") or 24
+        working_days = int(rec.get("working_days") or 0)
         ot_hours     = float(rec.get("ot_hours") or 0.0)
         reimbursements = rec.get("reimbursements") or []
+
+        # Skip records with no usable data
+        if not emp_name and not emp_id:
+            continue
+        if working_days == 0 and not rec.get("total_hours"):
+            continue
 
         # Look up employee master (for IBAN only)
         emp = None
@@ -771,39 +777,231 @@ def extract_timesheet(text_content: str = None, file_name: str = None,
     # ── EXCEL path ────────────────────────────────────────────────────────────
     if IS_EXCEL and file_bytes:
         try:
-            tmp = f"/tmp/ts_{uuid.uuid4().hex}.xlsx"
+            import tempfile
+            tmp = os.path.join(tempfile.gettempdir(), f"ts_{uuid.uuid4().hex}.xlsx")
             with open(tmp, "wb") as f: f.write(file_bytes)
             xl = pd.ExcelFile(tmp)
-            df = xl.parse(xl.sheet_names[0])
-            os.remove(tmp)
-            df = df.dropna(how="all")
+            try: os.remove(tmp)
+            except: pass
+
+            # Parse employee context from text_content (enriched by portal)
+            ctx_emp_id, ctx_name, ctx_wd, ctx_proj, ctx_ot = None, None, None, None, 0.0
+            if text_content:
+                m = re.search(r"Emp\s+ID\s*:\s*(EMP\w+)", text_content, re.I)
+                if m: ctx_emp_id = m.group(1).upper()
+                m = re.search(r"Employee\s+Name\s*:\s*(.+)", text_content, re.I)
+                if m: ctx_name = m.group(1).strip().split("\n")[0]
+                m = re.search(r"Working\s+Days\s*:\s*(\d+)", text_content, re.I)
+                if m:
+                    v = int(m.group(1))
+                    ctx_wd = v if 1 <= v <= 31 else None
+                m = re.search(r"Project\s+Code\s*:\s*(P[1-3])", text_content, re.I)
+                if m: ctx_proj = m.group(1).upper()
+                m = re.search(r"OT\s+Hours\s*:\s*([\d.]+)", text_content, re.I)
+                if m: ctx_ot = float(m.group(1))
+
             records = []
-            emp_col  = next((c for c in df.columns if "emp" in c.lower() or "id" in c.lower()), None)
-            name_col = next((c for c in df.columns if "name" in c.lower()), None)
-            days_col = next((c for c in df.columns if "day" in c.lower()), None)
-            ot_col   = next((c for c in df.columns if "ot" in c.lower() or "over" in c.lower()), None)
-            proj_col = next((c for c in df.columns if "proj" in c.lower()), None)
-            hrs_col  = next((c for c in df.columns if "hour" in c.lower() or "hr" in c.lower()), None)
-            for _, row in df.iterrows():
-                rec = {}
-                if emp_col:  rec["emp_id"]       = str(row[emp_col]).strip()
-                if name_col: rec["employee_name"] = str(row[name_col]).strip()
-                if days_col and not pd.isna(row[days_col]): rec["working_days"] = int(row[days_col])
-                if ot_col   and not pd.isna(row[ot_col]):   rec["ot_hours"]     = float(row[ot_col])
-                if proj_col and not pd.isna(row[proj_col]): rec["project_code"] = str(row[proj_col]).strip()
-                if hrs_col  and not pd.isna(row[hrs_col]):  rec["total_hours"]  = float(row[hrs_col])
-                rec["confidence"] = 0.97
-                if rec.get("emp_id") or rec.get("employee_name"):
-                    records.append(rec)
-            if records:
-                matched = match_employees(records, client_code)
+            for sheet_name in xl.sheet_names:
+                df_raw = xl.parse(sheet_name, header=None)
+                df_raw = df_raw.dropna(how="all").reset_index(drop=True)
+                cols_lower = [str(c).lower() for c in df_raw.iloc[0].fillna("").tolist()]
+
+                # ── FORMAT A: Monthly Summary (key-value layout) ──────────────
+                # Detect by: has rows where col0 looks like "Employee ID", "Working Days", etc.
+                col0_vals = df_raw[0].dropna().astype(str).str.lower().tolist()
+                is_kv = any(k in " ".join(col0_vals) for k in
+                            ("employee id", "working days", "regular hours", "overtime hours"))
+                if is_kv:
+                    kv = {}
+                    proj_rows = []
+                    in_proj_table = False
+                    for _, row in df_raw.iterrows():
+                        k = str(row.iloc[0]).strip() if not pd.isna(row.iloc[0]) else ""
+                        v = str(row.iloc[1]).strip() if len(row) > 1 and not pd.isna(row.iloc[1]) else ""
+                        kl = k.lower()
+                        if kl in ("project", "projects"):
+                            in_proj_table = True
+                            continue
+                        if in_proj_table and k and v:
+                            proj_code = str(k).strip().upper()
+                            try:
+                                days_v = int(str(row.iloc[1]).strip()) if not pd.isna(row.iloc[1]) else 0
+                                amt_v  = float(str(row.iloc[2]).strip()) if len(row) > 2 and not pd.isna(row.iloc[2]) else 0.0
+                                status = str(row.iloc[3]).strip() if len(row) > 3 and not pd.isna(row.iloc[3]) else ""
+                                if proj_code.startswith("P") and days_v > 0:
+                                    proj_rows.append({"code": proj_code, "days": days_v, "amount": amt_v, "status": status})
+                            except: pass
+                            continue
+                        if kl: kv[kl] = v
+
+                    emp_id_raw = ctx_emp_id or kv.get("employee id", "") or ""
+                    emp_name   = ctx_name or kv.get("employee name", "") or ""
+                    wd_raw     = kv.get("working days", "")
+                    ot_raw     = kv.get("overtime hours", "0")
+                    reg_hrs    = kv.get("regular hours", "0")
+                    period_raw = kv.get("month", "")
+
+                    try: wd = int(str(wd_raw).split(".")[0])
+                    except: wd = ctx_wd or 22
+                    try: ot_h = float(ot_raw)
+                    except: ot_h = ctx_ot or 0.0
+                    try: reg_h = float(str(reg_hrs).replace(",",""))
+                    except: reg_h = wd * STANDARD_HOURS
+
+                    # If project rows found, emit one record per billable project
+                    billable_projs = [p for p in proj_rows if p["code"] in PROJECTS]
+                    if billable_projs:
+                        for p in billable_projs:
+                            records.append({
+                                "emp_id":        emp_id_raw or ctx_emp_id,
+                                "employee_name": emp_name or ctx_name,
+                                "working_days":  p["days"],
+                                "ot_hours":      ot_h if p == billable_projs[-1] else 0.0,
+                                "total_hours":   p["days"] * STANDARD_HOURS,
+                                "project_code":  p["code"],
+                                "pay_period":    period_raw,
+                                "confidence":    0.97,
+                            })
+                    else:
+                        records.append({
+                            "emp_id":        emp_id_raw or ctx_emp_id,
+                            "employee_name": emp_name or ctx_name,
+                            "working_days":  wd,
+                            "ot_hours":      ot_h,
+                            "total_hours":   reg_h + ot_h,
+                            "project_code":  ctx_proj,
+                            "pay_period":    period_raw,
+                            "confidence":    0.97,
+                        })
+                    continue  # done with this sheet
+
+                # ── FORMAT B: Daily Timesheet (per-day rows) ──────────────────
+                # Detect by: first row has Date, Day, Project, Regular Hours, OT Hours
+                has_date_col  = any("date" in c for c in cols_lower)
+                has_proj_col  = any("proj" in c for c in cols_lower)
+                has_hours_col = any("hour" in c or "hr" in c for c in cols_lower)
+
+                if has_date_col and has_proj_col and has_hours_col:
+                    # Use first row as header
+                    df = xl.parse(sheet_name, header=0)
+                    df = df.dropna(how="all")
+                    cols = {c.lower(): c for c in df.columns}
+
+                    proj_col_name  = next((cols[c] for c in cols if "proj" in c), None)
+                    reg_col_name   = next((cols[c] for c in cols if "regular" in c and "hour" in c), None)
+                    ot_col_name    = next((cols[c] for c in cols if "ot" in c or "over" in c), None)
+                    total_col_name = next((cols[c] for c in cols if "total" in c and "hour" in c), None)
+                    amt_col_name   = next((cols[c] for c in cols if "amount" in c or "daily" in c), None)
+
+                    # Filter only actual work rows (skip weekends, holidays, leave)
+                    work_df = df.copy()
+                    if proj_col_name:
+                        work_df = work_df[~work_df[proj_col_name].astype(str).str.lower().isin(
+                            ["weekend", "holiday", "leave", "nan", ""])]
+
+                    # Group by project for project-level records
+                    proj_groups: dict = {}
+                    total_reg_hrs = 0.0
+                    total_ot_hrs  = 0.0
+
+                    for _, row in work_df.iterrows():
+                        proj = str(row[proj_col_name]).strip().upper() if proj_col_name else "GENERAL"
+                        reg  = float(row[reg_col_name]) if reg_col_name and not pd.isna(row[reg_col_name]) else 8.0
+                        ot   = float(row[ot_col_name])  if ot_col_name  and not pd.isna(row[ot_col_name])  else 0.0
+                        if proj not in proj_groups:
+                            proj_groups[proj] = {"reg_hours": 0.0, "ot_hours": 0.0, "days": 0}
+                        proj_groups[proj]["reg_hours"] += reg
+                        proj_groups[proj]["ot_hours"]  += ot
+                        proj_groups[proj]["days"]      += 1
+                        total_reg_hrs += reg
+                        total_ot_hrs  += ot
+
+                    total_working_days = sum(v["days"] for v in proj_groups.values())
+
+                    # Emit one record per billable project (P1/P2/P3)
+                    # Non-billable (Internal/Training) contribute to total only
+                    billable = {k: v for k, v in proj_groups.items() if k in PROJECTS}
+                    non_bill = {k: v for k, v in proj_groups.items() if k not in PROJECTS}
+
+                    if billable:
+                        for proj in sorted(billable.keys()):
+                            grp = billable[proj]
+                            records.append({
+                                "emp_id":        ctx_emp_id,
+                                "employee_name": ctx_name,
+                                "working_days":  grp["days"],
+                                "ot_hours":      round(grp["ot_hours"], 2),
+                                "total_hours":   round(grp["reg_hours"] + grp["ot_hours"], 2),
+                                "project_code":  proj,
+                                "pay_period":    "",
+                                "confidence":    0.97,
+                            })
+                    else:
+                        # No billable projects — emit single summary record
+                        records.append({
+                            "emp_id":        ctx_emp_id,
+                            "employee_name": ctx_name,
+                            "working_days":  total_working_days,
+                            "ot_hours":      total_ot_hrs,
+                            "total_hours":   round(total_reg_hrs + total_ot_hrs, 2),
+                            "project_code":  ctx_proj,
+                            "pay_period":    "",
+                            "confidence":    0.97,
+                        })
+                    continue
+
+                # ── FORMAT C: Standard tabular (emp_id/name columns) ──────────
+                df = xl.parse(sheet_name, header=0)
+                df = df.dropna(how="all")
+                c_map = {c.lower(): c for c in df.columns}
+                emp_c  = next((c_map[c] for c in c_map if "emp" in c or ("id" in c and "emp" in c)), None)
+                name_c = next((c_map[c] for c in c_map if "name" in c), None)
+                day_c  = next((c_map[c] for c in c_map if "working" in c and "day" in c), None) or \
+                         next((c_map[c] for c in c_map if "day" in c), None)
+                ot_c   = next((c_map[c] for c in c_map if "ot" in c or "over" in c), None)
+                proj_c = next((c_map[c] for c in c_map if "proj" in c), None)
+                hrs_c  = next((c_map[c] for c in c_map if "total" in c and ("hr" in c or "hour" in c)), None) or \
+                         next((c_map[c] for c in c_map if "hr" in c or "hour" in c), None)
+                for _, row in df.iterrows():
+                    rec = {"confidence": 0.97}
+                    if emp_c:  rec["emp_id"]       = str(row[emp_c]).strip()
+                    if name_c: rec["employee_name"] = str(row[name_c]).strip()
+                    if day_c and not pd.isna(row[day_c]):
+                        try:
+                            v = int(str(row[day_c]).split(".")[0])
+                            if 1 <= v <= 31: rec["working_days"] = v
+                        except: pass
+                    if ot_c  and not pd.isna(row[ot_c]):   rec["ot_hours"]    = float(row[ot_c])
+                    if proj_c and not pd.isna(row[proj_c]): rec["project_code"] = str(row[proj_c]).strip()
+                    if hrs_c and not pd.isna(row[hrs_c]):
+                        try: rec["total_hours"] = float(row[hrs_c])
+                        except: pass
+                    if rec.get("emp_id") or rec.get("employee_name"):
+                        records.append(rec)
+
+            # ── Filter junk records ────────────────────────────────────────────
+            clean = []
+            for r in records:
+                eid = str(r.get("emp_id","")).strip()
+                enm = str(r.get("employee_name","")).strip()
+                # Skip header bleed, nan, empty
+                if eid.lower() in ("nan","none","emp_id","employee_id","") and \
+                   enm.lower() in ("nan","none","employee_name","name",""):
+                    continue
+                clean.append(r)
+
+            if clean:
+                matched = match_employees(clean, client_code)
                 overall = round(sum(r.get("confidence",0) for r in matched)/max(len(matched),1), 2)
                 return {"records": matched, "overall_confidence": overall,
                         "meta": {"has_signature": False, "has_stamp": False,
-                                 "is_handwritten": False, "raw_text_extracted": "[Excel parsed]",
+                                 "is_handwritten": False,
+                                 "raw_text_extracted": f"[Excel parsed: {len(clean)} records]",
                                  "pipeline": "excel"}}
         except Exception as e:
+            import traceback
             print(f"[Excel] parse error: {e}")
+            traceback.print_exc()
 
     # ── CSV path ──────────────────────────────────────────────────────────────
     if IS_CSV and file_bytes:
