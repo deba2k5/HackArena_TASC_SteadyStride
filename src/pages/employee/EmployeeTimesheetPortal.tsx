@@ -149,7 +149,7 @@ export default function EmployeeTimesheetPortal() {
   const [projectCode, setProjectCode] = useState("");
   const [workingDays, setWorkingDays] = useState("");
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [lastResult, setLastResult] = useState<Timesheet | null>(null);
+  const [lastResult, setLastResult] = useState<{ ts: Timesheet; inv: Invoice | null } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // ── Query form ────────────────────────────────────────────────────────────
@@ -159,14 +159,23 @@ export default function EmployeeTimesheetPortal() {
 
   const uploadMutation = useMutation({
     mutationFn: (fd: FormData) => api.uploadTimesheet(fd),
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       toast.success("Timesheet submitted — AI processing complete.");
       qc.invalidateQueries({ queryKey: ["timesheets"] });
       qc.invalidateQueries({ queryKey: ["invoices"] });
       setTextContent("");
       setFile(null);
       setImagePreview(null);
-      setLastResult(data as Timesheet);
+      // Fetch invoice generated for this timesheet
+      try {
+        await new Promise((r) => setTimeout(r, 800)); // brief wait for invoice write
+        const allInv = await api.listInvoices(clientCode);
+        const ts = data as Timesheet;
+        const inv = allInv.find((i) => i.timesheet_id === ts.id);
+        setLastResult({ ts, inv: inv ?? null });
+      } catch {
+        setLastResult({ ts: data as Timesheet, inv: null });
+      }
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -431,65 +440,124 @@ export default function EmployeeTimesheetPortal() {
                 {/* AI Extraction Result — shown after handwriting submission */}
                 {lastResult && inputType === "handwriting" && (
                   <div className="sm:col-span-2 rounded-xl border border-indigo-200 bg-indigo-500/5 p-4 space-y-3">
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
                       <p className="text-sm font-semibold text-indigo-700 flex items-center gap-1.5">
                         <Brain className="h-4 w-4" /> Groq VLM Extraction Result
                       </p>
                       <div className="flex items-center gap-2">
                         <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                          (lastResult.overall_confidence ?? 0) >= 0.9
+                          ((lastResult.ts.overall_confidence ?? lastResult.ts.extracted_data?.overall_confidence) ?? 0) >= 0.9
                             ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"
                         }`}>
-                          {(((lastResult.overall_confidence ?? lastResult.extracted_data?.overall_confidence) ?? 0) * 100).toFixed(0)}% confidence
+                          {((((lastResult.ts.overall_confidence ?? lastResult.ts.extracted_data?.overall_confidence) ?? 0)) * 100).toFixed(0)}% confidence
                         </span>
                         <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                          lastResult.status === "processed"
+                          lastResult.ts.status === "processed"
                             ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"
                         }`}>
-                          {lastResult.status === "processed" ? "✓ Auto-dispatched" : lastResult.status.replace(/_/g, " ")}
+                          {lastResult.ts.status === "processed" ? "✓ Processed & Dispatched" : lastResult.ts.status.replace(/_/g, " ")}
                         </span>
                       </div>
                     </div>
-                    {/* Extracted rows table */}
-                    {(lastResult.extracted_data?.records?.length ?? 0) > 0 && (
+
+                    {/* Show from invoice line items — always has correct values */}
+                    {lastResult.inv && (lastResult.inv.line_items?.length ?? 0) > 0 ? (
                       <div className="overflow-x-auto rounded-lg border bg-background">
                         <table className="w-full text-xs">
                           <thead>
                             <tr className="border-b bg-muted/40">
                               <th className="px-3 py-2 text-left font-semibold">Employee</th>
                               <th className="px-3 py-2 text-right font-semibold">Days</th>
-                              <th className="px-3 py-2 text-right font-semibold">Basic</th>
-                              <th className="px-3 py-2 text-right font-semibold">Deductions</th>
-                              <th className="px-3 py-2 text-right font-semibold">Net Pay</th>
-                              <th className="px-3 py-2 text-center font-semibold">Match</th>
+                              <th className="px-3 py-2 text-right font-semibold">Basic (AED)</th>
+                              <th className="px-3 py-2 text-right font-semibold">Deductions (AED)</th>
+                              <th className="px-3 py-2 text-right font-semibold">Net Pay (AED)</th>
                             </tr>
                           </thead>
                           <tbody>
-                            {lastResult.extracted_data.records.map((r, i) => {
-                              const rec = r as Record<string, unknown>;
+                            {lastResult.inv.line_items.map((li, i) => {
+                              const l = li as Record<string, unknown>;
+                              const empName = (l.employee_name ?? l.full_name ?? "—") as string;
+                              const empId   = l.emp_id as string | undefined;
+                              const days    = l.working_days ?? l.days_worked;
+                              const basic   = l.basic != null ? Number(l.basic) : null;
+                              const deduct  = l.deductions != null ? Number(l.deductions) : 0;
+                              const net     = l.net_pay != null ? Number(l.net_pay) : null;
                               return (
-                                <tr key={i} className="border-b last:border-0">
+                                <tr key={i} className="border-b last:border-0 hover:bg-muted/20">
                                   <td className="px-3 py-2 font-medium">
-                                    {(rec.matched_name ?? rec.employee_name ?? "—") as string}
-                                    {rec.matched_emp_id && <span className="text-muted-foreground ml-1 text-[10px]">({rec.matched_emp_id as string})</span>}
+                                    {empName}
+                                    {empId && <span className="text-muted-foreground ml-1 text-[10px]">({empId})</span>}
                                   </td>
-                                  <td className="px-3 py-2 text-right">{(rec.working_days ?? "—") as string}</td>
-                                  <td className="px-3 py-2 text-right">{rec.basic_pay != null ? `AED ${Number(rec.basic_pay).toLocaleString()}` : "—"}</td>
-                                  <td className="px-3 py-2 text-right text-red-600">{rec.deductions != null ? `AED ${Number(rec.deductions).toLocaleString()}` : "—"}</td>
-                                  <td className="px-3 py-2 text-right font-bold text-green-700">{rec.net_pay != null ? `AED ${Number(rec.net_pay).toLocaleString()}` : "—"}</td>
-                                  <td className="px-3 py-2 text-center">
-                                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
-                                      rec.match_status === "matched" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
-                                    }`}>{(rec.match_status ?? "unknown") as string}</span>
+                                  <td className="px-3 py-2 text-right">{days != null ? String(days) : "—"}</td>
+                                  <td className="px-3 py-2 text-right">{basic != null ? basic.toLocaleString("en-AE", {minimumFractionDigits:2}) : "—"}</td>
+                                  <td className="px-3 py-2 text-right text-red-600">{deduct.toLocaleString("en-AE", {minimumFractionDigits:2})}</td>
+                                  <td className="px-3 py-2 text-right font-bold text-green-700">
+                                    {net != null ? net.toLocaleString("en-AE", {minimumFractionDigits:2}) : "—"}
                                   </td>
                                 </tr>
                               );
                             })}
                           </tbody>
+                          <tfoot>
+                            <tr className="border-t bg-muted/20">
+                              <td colSpan={4} className="px-3 py-2 font-semibold text-right text-indigo-700">Total Net Pay</td>
+                              <td className="px-3 py-2 text-right font-bold text-indigo-700">
+                                {lastResult.inv.total_amount.toLocaleString("en-AE", {minimumFractionDigits:2})}
+                              </td>
+                            </tr>
+                          </tfoot>
                         </table>
                       </div>
+                    ) : (
+                      /* Fallback: show from extracted records if invoice not yet generated */
+                      (lastResult.ts.extracted_data?.records?.length ?? 0) > 0 && (
+                        <div className="overflow-x-auto rounded-lg border bg-background">
+                          <table className="w-full text-xs">
+                            <thead>
+                              <tr className="border-b bg-muted/40">
+                                <th className="px-3 py-2 text-left font-semibold">Employee</th>
+                                <th className="px-3 py-2 text-right font-semibold">Days</th>
+                                <th className="px-3 py-2 text-right font-semibold">Basic (AED)</th>
+                                <th className="px-3 py-2 text-right font-semibold">Deductions (AED)</th>
+                                <th className="px-3 py-2 text-right font-semibold">Net Pay (AED)</th>
+                                <th className="px-3 py-2 text-center font-semibold">Match</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {lastResult.ts.extracted_data.records.map((r, i) => {
+                                const rec = r as Record<string, unknown>;
+                                const basicVal  = rec.basic_pay  != null ? Number(rec.basic_pay)  : null;
+                                const deductVal = rec.deductions != null ? Number(rec.deductions) : null;
+                                const netVal    = rec.net_pay    != null ? Number(rec.net_pay)    : null;
+                                // Compute net from 500/hr if not available from VLM
+                                const wd        = rec.working_days != null ? Number(rec.working_days) : null;
+                                const computed  = wd != null ? wd * 8 * 500 : null;
+                                return (
+                                  <tr key={i} className="border-b last:border-0">
+                                    <td className="px-3 py-2 font-medium">
+                                      {((rec.matched_name ?? rec.employee_name ?? "—") as string)}
+                                      {rec.matched_emp_id && <span className="text-muted-foreground ml-1 text-[10px]">({rec.matched_emp_id as string})</span>}
+                                    </td>
+                                    <td className="px-3 py-2 text-right">{wd != null ? String(wd) : "—"}</td>
+                                    <td className="px-3 py-2 text-right">{basicVal != null ? basicVal.toLocaleString() : (computed != null ? computed.toLocaleString() : "—")}</td>
+                                    <td className="px-3 py-2 text-right text-red-600">{deductVal != null ? deductVal.toLocaleString() : "0"}</td>
+                                    <td className="px-3 py-2 text-right font-bold text-green-700">{netVal != null ? netVal.toLocaleString() : (computed != null ? computed.toLocaleString() : "—")}</td>
+                                    <td className="px-3 py-2 text-center">
+                                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                                        rec.match_status === "matched" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+                                      }`}>{(rec.match_status ?? "unknown") as string}</span>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      )
                     )}
-                    <button type="button" onClick={() => setLastResult(null)} className="text-xs text-muted-foreground hover:text-foreground">
+
+                    <button type="button" onClick={() => setLastResult(null)}
+                      className="text-xs text-muted-foreground hover:text-foreground underline">
                       Dismiss
                     </button>
                   </div>
