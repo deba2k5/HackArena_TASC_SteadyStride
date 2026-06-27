@@ -108,17 +108,17 @@ export default function EmployeeTimesheetPortal() {
 
   // My timesheets / invoices only
   const myTimesheets = timesheets.filter((t) =>
-    t.extracted_data?.records?.some(
-      (r) => r.emp_id === employee?.emp_id ||
-             r.matched_emp_id === employee?.emp_id ||
-             (r as Record<string,unknown>).matched_emp_id === employee?.emp_id
-    )
+    t.extracted_data?.records?.some((r) => {
+      const recEmpId = (r as Record<string, unknown>).matched_emp_id as string | undefined
+                    || (r as Record<string, unknown>).emp_id as string | undefined;
+      return recEmpId === employee?.emp_id;
+    })
   );
   const myInvoices = invoices.filter((inv) =>
     inv.line_items?.some((li) => {
-      const l = li as Record<string, unknown>;
-      return l.emp_id === employee?.emp_id ||
-             l.matched_emp_id === employee?.emp_id;
+      const empId = (li as Record<string, unknown>).emp_id as string | undefined;
+      const matchedEmpId = (li as Record<string, unknown>).matched_emp_id as string | undefined;
+      return empId === employee?.emp_id || matchedEmpId === employee?.emp_id;
     })
   );
   const totalEarned = myInvoices.reduce((s, i) => s + (i.total_amount ?? 0), 0);

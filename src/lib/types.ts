@@ -159,12 +159,28 @@ export interface Timesheet {
 
 export interface LineItem {
   emp_id: string;
-  full_name: string;
+  employee_name?: string;
+  full_name?: string;
   basic: number;
-  days_worked: number;
+  housing?: number;
+  transport?: number;
+  food?: number;
+  phone?: number;
+  gross?: number;
+  ot_amount?: number;
+  deductions?: number;
+  days_worked?: number;
+  working_days?: number;
+  ot_hours?: number;
   overtime_hours?: number;
-  reimbursements?: number;
-  gross_pay: number;
+  reimbursements?: number | unknown[];
+  gross_pay?: number;
+  net_pay?: number;
+  iban?: string;
+  project_code?: string;
+  project_name?: string;
+  total_billable?: number;
+  cap_exceeded?: boolean;
   [key: string]: unknown;
 }
 
