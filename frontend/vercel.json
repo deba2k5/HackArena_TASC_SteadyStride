@@ -7,5 +7,11 @@
     "VITE_WS_URL": "https://sinhasbackend1.vercel.app",
     "VITE_GOOGLE_DRIVE_UPLOAD_URL": "https://drive.google.com/drive/folders/1i5eJ2S3LVEsnEYI8gpljk-E0eoq6rCSb",
     "VITE_ADMIN_EMAILS": "admin@sinhas.ch,manager@sinhas.ch"
-  }
+  },
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
 }
