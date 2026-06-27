@@ -281,7 +281,26 @@ async def upload_timesheet(
 # ============ HITL EXCEPTION QUEUE ENDPOINTS ============
 
 class HITLResolveRequest(BaseModel):
-    records: List[dict] # The updated records (containing corrected matched_emp_id, working_days, ot_hours)
+    records: List[dict]
+
+class HITLRejectRequest(BaseModel):
+    comment: Optional[str] = ""
+
+@app.post("/api/timesheets/{id}/reject")
+async def reject_timesheet(id: str, payload: HITLRejectRequest, x_user_email: Optional[str] = Header(None)):
+    timesheets_col = get_collection("timesheets")
+    ts = timesheets_col.find_one({"id": id})
+    if not ts:
+        raise HTTPException(status_code=404, detail="Timesheet not found")
+    ts["status"] = "rejected"
+    ts["admin_comment"] = payload.comment or ""
+    ts["reviewed_by"] = x_user_email or "admin"
+    ts["reviewed_at"] = datetime.utcnow().isoformat()
+    timesheets_col.update_one({"id": id}, {"$set": ts})
+    log_audit(actor=x_user_email or "admin", action="timesheet_rejected", target=id,
+              meta={"client_code": ts.get("client_code"), "comment": payload.comment})
+    await notify_clients("timesheet_updated", ts)
+    return ts
 
 @app.post("/api/timesheets/{id}/approve")
 async def approve_timesheet(id: str, payload: HITLResolveRequest, x_user_email: Optional[str] = Header(None)):

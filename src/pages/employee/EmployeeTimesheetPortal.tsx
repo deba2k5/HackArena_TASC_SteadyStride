@@ -18,7 +18,7 @@ import { toast } from "sonner";
 import {
   Upload, FileText, MessageSquare, Clock, DollarSign,
   CheckCircle2, AlertTriangle, Eye, RefreshCw, Send,
-  Calendar, User, Building2, Briefcase,
+  Calendar, User, Building2, Briefcase, Brain,
 } from "lucide-react";
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
@@ -43,8 +43,14 @@ const INPUT_TYPES = [
   { value: "email",       label: "Email / Text" },
   { value: "excel",       label: "Excel Spreadsheet" },
   { value: "pdf",         label: "PDF Document" },
-  { value: "handwriting", label: "Handwritten / Scan" },
+  { value: "handwriting", label: "Handwritten / Scan (AI reads image)" },
   { value: "text",        label: "Plain Text" },
+];
+
+const PROJECTS = [
+  { code: "P1", label: "P1 — Alpha Infrastructure (max AED 24,000 / 6 days)" },
+  { code: "P2", label: "P2 — Beta Integration (max AED 20,000 / 5 days)" },
+  { code: "P3", label: "P3 — Gamma Support (max AED 16,000 / 4 days)" },
 ];
 
 export default function EmployeeTimesheetPortal() {
@@ -108,6 +114,9 @@ export default function EmployeeTimesheetPortal() {
   const [textContent, setTextContent] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [selectedInv, setSelectedInv] = useState<Invoice | null>(null);
+  const [projectCode, setProjectCode] = useState("");
+  const [workingDays, setWorkingDays] = useState("");
+  const [otHours, setOtHours] = useState("");
 
   // ── Query form ────────────────────────────────────────────────────────────
   const [queryInvId, setQueryInvId] = useState("");
@@ -149,7 +158,16 @@ export default function EmployeeTimesheetPortal() {
     fd.append("client_code", clientCode);
     fd.append("pay_period", payPeriod);
     fd.append("input_type", inputType);
-    if (textContent) fd.append("text_content", textContent);
+    // Build enriched text with structured fields so the AI pipeline has clean input
+    let enrichedText = textContent || "";
+    if (employee && !enrichedText.includes("Emp ID")) {
+      enrichedText = `Emp ID: ${employee.emp_id}\nEmployee Name: ${employee.full_name}\nClient: ${employee.client_name} (${clientCode})\nPay Period: ${payPeriod}` +
+        (workingDays ? `\nWorking Days: ${workingDays}` : "") +
+        (otHours     ? `\nOT Hours: ${otHours}` : "") +
+        (projectCode ? `\nProject Code: ${projectCode}` : "") +
+        (enrichedText ? `\n\n${enrichedText}` : "");
+    }
+    if (enrichedText) fd.append("text_content", enrichedText);
     if (file) fd.append("file", file);
     uploadMutation.mutate(fd);
   };
@@ -266,19 +284,63 @@ export default function EmployeeTimesheetPortal() {
                     </SelectContent>
                   </Select>
                 </div>
+
+                {/* Structured fields — pre-fill the AI pipeline */}
                 <div className="space-y-1.5">
-                  <Label>Attach File <span className="text-muted-foreground text-xs">(Excel / PDF / Image / CSV)</span></Label>
-                  <Input type="file" accept=".xlsx,.xls,.pdf,.png,.jpg,.jpeg,.csv,.docx"
-                    onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+                  <Label>Working Days <span className="text-muted-foreground text-xs">(leave blank if in text/file)</span></Label>
+                  <Input type="number" min={1} max={31} value={workingDays}
+                    onChange={(e) => setWorkingDays(e.target.value)} placeholder="e.g. 24" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Overtime Hours <span className="text-muted-foreground text-xs">(optional)</span></Label>
+                  <Input type="number" min={0} step={0.5} value={otHours}
+                    onChange={(e) => setOtHours(e.target.value)} placeholder="e.g. 2" />
                 </div>
                 <div className="space-y-1.5 sm:col-span-2">
-                  <Label>Email / Text Content <span className="text-muted-foreground text-xs">(paste your timesheet email or body)</span></Label>
-                  <Textarea rows={5} value={textContent} onChange={(e) => setTextContent(e.target.value)}
-                    placeholder={`Example:\nHi, here is my timesheet for June 2026.\nEmp ID: ${employee?.emp_id ?? "EMP10001"}, days worked: 24, OT hours: 2.`} />
+                  <Label>Project Assignment <span className="text-muted-foreground text-xs">(optional — caps billing per Office Regulation)</span></Label>
+                  <Select value={projectCode || "none"} onValueChange={(v) => setProjectCode(v === "none" ? "" : v)}>
+                    <SelectTrigger><SelectValue placeholder="No project / general hours" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No project / general hours (AED 500/hr)</SelectItem>
+                      {PROJECTS.map((p) => (
+                        <SelectItem key={p.code} value={p.code}>{p.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
+
+                <div className="space-y-1.5">
+                  <Label>Attach File <span className="text-muted-foreground text-xs">(Excel / PDF / Image / Handwritten scan)</span></Label>
+                  <Input type="file" accept=".xlsx,.xls,.pdf,.png,.jpg,.jpeg,.csv,.docx"
+                    onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+                  {inputType === "handwriting" && (
+                    <p className="text-[11px] text-indigo-600 flex items-center gap-1">
+                      <Brain className="h-3 w-3" /> Groq Llama-4 Scout + Tesseract OCR will read your handwritten image
+                    </p>
+                  )}
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Additional Notes <span className="text-muted-foreground text-xs">(or full email body)</span></Label>
+                  <Textarea rows={3} value={textContent} onChange={(e) => setTextContent(e.target.value)}
+                    placeholder={`E.g. Reimbursement: 150 AED - Phone allowance`} />
+                </div>
+
+                {/* Pay estimate */}
+                {workingDays && (
+                  <div className="sm:col-span-2 rounded-lg bg-indigo-500/5 border border-indigo-100 p-3 text-xs">
+                    <p className="font-semibold text-indigo-700 mb-1">💡 Pay Estimate (Office Regulation Act)</p>
+                    <p className="text-muted-foreground">
+                      Regular: {workingDays} days × 8 hrs × AED 500 = <strong>AED {(Number(workingDays) * 8 * 500).toLocaleString()}</strong>
+                      {otHours ? ` + OT: ${otHours} hrs × AED 750 = AED ${(Number(otHours) * 750).toLocaleString()}` : ""}
+                      {projectCode ? ` (Project ${projectCode} cap applies)` : ""}
+                    </p>
+                  </div>
+                )}
+
                 <div className="sm:col-span-2 flex justify-end">
-                  <Button type="submit" disabled={uploadMutation.isPending || !employee} className="min-w-36">
-                    {uploadMutation.isPending ? "Submitting…" : "Submit Timesheet"}
+                  <Button type="submit" disabled={uploadMutation.isPending || !employee} className="min-w-40 gap-1.5">
+                    <Brain className="h-3.5 w-3.5" />
+                    {uploadMutation.isPending ? "Processing with AI…" : "Submit Timesheet"}
                   </Button>
                 </div>
               </form>
