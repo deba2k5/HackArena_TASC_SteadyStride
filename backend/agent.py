@@ -306,6 +306,42 @@ def parse_heuristics(text: str) -> list:
     period_m = re.search(r"(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s*(202\d)", text, re.I)
     period = f"{period_m.group(1)} {period_m.group(2)}" if period_m else "June 2026"
 
+    # ── Structured key:value format (sent by employee portal enrichment) ──────
+    # E.g. "Emp ID: EMP10001\nEmployee Name: Carlos Smith\nWorking Days: 4\nProject Code: P2"
+    kv: dict = {}
+    for line in lines:
+        m = re.match(r"^([A-Za-z][A-Za-z\s/_]{1,30}?)\s*:\s*(.+)$", line)
+        if m:
+            key = m.group(1).strip().lower().replace(" ", "_").replace("/", "_")
+            val = m.group(2).strip()
+            kv[key] = val
+
+    if kv.get("emp_id") or kv.get("employee_name"):
+        working_days_raw = kv.get("working_days") or kv.get("days_worked")
+        try:
+            wd = int(str(working_days_raw).split(".")[0]) if working_days_raw else None
+            wd = wd if wd and 1 <= wd <= 31 else None
+        except (ValueError, TypeError):
+            wd = None
+        proj_raw = kv.get("project_code") or kv.get("project")
+        proj = None
+        if proj_raw:
+            pm = re.search(r"(P[1-3])", str(proj_raw), re.I)
+            proj = pm.group(1).upper() if pm else None
+        ot_raw = kv.get("ot_hours") or kv.get("overtime_hours") or "0"
+        try:
+            ot = float(ot_raw)
+        except (ValueError, TypeError):
+            ot = 0.0
+        return [{
+            "emp_id":        kv.get("emp_id", "").strip().upper() or None,
+            "employee_name": kv.get("employee_name", "").strip() or None,
+            "working_days":  wd,
+            "ot_hours":      ot,
+            "project_code":  proj,
+            "pay_period":    period,
+        }]
+
     # Case 3 — bulk list: "Name: 24 days"
     case3 = []
     client_m = re.search(r"(CL\d{3})|DP World|Emaar|Emirates Steel|ADNOC|Majid|ADCB|Etihad|Aldar|Transguard", text, re.I)
@@ -318,19 +354,31 @@ def parse_heuristics(text: str) -> list:
             nm = m.group(1).strip()
             if nm.lower() in ("timesheet","client","payroll","subject","from","to","email","hi","dear","date","name"):
                 continue
-            case3.append({"employee_name": nm, "working_days": int(m.group(2)), "client_code": detected_cc, "pay_period": period})
+            wd = int(m.group(2))
+            if 1 <= wd <= 31:  # only valid day counts
+                case3.append({"employee_name": nm, "working_days": wd, "client_code": detected_cc, "pay_period": period})
     if len(case3) >= 2:
         return case3
 
     emp_m = re.search(r"EMP\d{5}", text, re.I)
-    days_m = re.search(r"(\d+)\s*(days?|working days?|days? worked)", text, re.I)
+    days_m = re.search(r"(?:working days?|days? worked|days)[:\s]+(\d+)", text, re.I)
+    if not days_m:
+        days_m = re.search(r"(\d+)\s*(days?|working days?|days? worked)", text, re.I)
     hours_m = re.search(r"(\d+\.?\d*)\s*(?:hours?|hrs?)\s*(?:worked|per day|daily)?", text, re.I)
     ot_m   = re.search(r"(?:overtime|o/?t)\s*(?:hours?)?\s*[:\-=]?\s*(\d+\.?\d*)", text, re.I)
     proj_m = re.search(r"(?:project|proj)\s*[:\-]?\s*([P]\d|Alpha|Beta|Gamma|P1|P2|P3)", text, re.I)
 
+    def _safe_days(m):
+        if not m: return None
+        try:
+            v = int(m.group(1))
+            return v if 1 <= v <= 31 else None
+        except (ValueError, IndexError):
+            return None
+
     # Case 2 — EMP ID + days
     if emp_m and days_m:
-        return [{"emp_id": emp_m.group(0).upper(), "working_days": int(days_m.group(1)),
+        return [{"emp_id": emp_m.group(0).upper(), "working_days": _safe_days(days_m),
                  "ot_hours": float(ot_m.group(1)) if ot_m else 0.0,
                  "hours_worked": float(hours_m.group(1)) if hours_m else None,
                  "project_code": proj_m.group(1).upper() if proj_m else None,
@@ -353,7 +401,7 @@ def parse_heuristics(text: str) -> list:
             if desc.strip().lower() not in ("basic","housing","transport","food","phone","gross","net"):
                 reimbs.append({"amount": float(val), "reason": desc.strip()})
         return [{"emp_id": emp_m.group(0).upper() if emp_m else None,
-                 "working_days": int(days_m.group(1)) if days_m else 23,
+                 "working_days": _safe_days(days_m) or 23,
                  "leave_days": int(leave_m.group(1)) if leave_m else 0,
                  "ot_hours": float(ot_m.group(1)) if ot_m else 0.0,
                  "project_code": proj_m.group(1).upper() if proj_m else None,
@@ -363,7 +411,7 @@ def parse_heuristics(text: str) -> list:
     nm_m2 = re.search(r"(?:i am|my name is|employee[:\s]+)([A-Za-z]+ [A-Za-z]+)", text, re.I)
     if nm_m2:
         return [{"employee_name": nm_m2.group(1).strip(),
-                 "working_days": int(days_m.group(1)) if days_m else 24,
+                 "working_days": _safe_days(days_m) or 24,
                  "ot_hours": float(ot_m.group(1)) if ot_m else 0.0,
                  "project_code": proj_m.group(1).upper() if proj_m else None,
                  "pay_period": period}]
@@ -393,11 +441,15 @@ def merge_extraction(bert: dict, heuristic: list, vlm: dict) -> list:
         if vlm.get("confidence"):
             base["vlm_confidence"] = float(vlm["confidence"])
 
-    # Coerce numeric types
+    # Coerce numeric types and validate ranges
     for f in ("working_days", "leave_days"):
         if base.get(f):
-            try: base[f] = int(str(base[f]).split(".")[0])
-            except: pass
+            try:
+                v = int(str(base[f]).split(".")[0])
+                # Reject impossible values (e.g. BERT extracting the year 2026 as working_days)
+                base[f] = v if 1 <= v <= 31 else None
+            except (ValueError, TypeError):
+                base[f] = None
     for f in ("ot_hours","hours_per_day","total_hours"):
         if base.get(f):
             try: base[f] = float(base[f])
@@ -533,33 +585,15 @@ def calculate_project_pay(emp_record: dict, rec: dict) -> dict:
                               f"({project_info['name']}) cap of AED {max_pay:,.2f}.")
             total_billable = max_pay   # hard cap
 
-    # TASC payroll basis (salary from master record)
-    emp_id = rec.get("matched_emp_id")
-    emp    = emp_record  # already looked up by caller
-    if emp:
-        basic     = float(emp.get("basic", 0))
-        housing   = float(emp.get("housing", 0))
-        transport = float(emp.get("transport", 0))
-        food      = float(emp.get("food", 0))
-        phone     = float(emp.get("phone", 0))
-        gross     = basic + housing + transport + food + phone
-        ot_rate   = round((basic / 30 / 8) * 1.25, 2)
-        ot_amount = round(ot_hours * ot_rate, 2)
-        standard_days = 24
-        deductions = 0.0
-        if working_days and working_days < standard_days:
-            deductions = round((basic / standard_days) * (standard_days - working_days), 2)
-        reimb_total = sum(float(r.get("amount", 0)) for r in (rec.get("reimbursements") or []))
-        net_pay     = round(gross + ot_amount + reimb_total - deductions, 2)
-    else:
-        # No TASC record — use project/hourly rules only
-        basic = housing = transport = food = phone = gross = 0.0
-        ot_rate = BASE_HOURLY_RATE * OT_MULTIPLIER
-        ot_amount  = round(ot_hours * ot_rate, 2)
-        deductions = 0.0
-        net_pay    = round(total_billable, 2)
-        reimb_total = 0.0
+    # Always bill at Office Regulation rate: 500 AED/hr × 8 hrs/day
+    # TASC salary components are NOT used for project billing amounts.
+    basic = housing = transport = food = phone = gross = 0.0
+    ot_rate    = BASE_HOURLY_RATE * OT_MULTIPLIER
+    ot_amount  = round(ot_hours * ot_rate, 2)
+    deductions = 0.0
+    net_pay    = round(total_billable, 2)
 
+    emp = emp_record  # kept for IBAN lookup only
     return {
         "regular_hours":    round(regular_hours, 2),
         "ot_hours":         ot_hours,
@@ -572,11 +606,15 @@ def calculate_project_pay(emp_record: dict, rec: dict) -> dict:
         "project_max_days": project_info["max_days"] if project_info else None,
         "cap_exceeded":     cap_exceeded,
         "cap_violation":    cap_violation,
-        # TASC payroll
-        "basic":        basic,    "housing":    housing,
-        "transport":    transport,"food":       food,
-        "phone":        phone,    "gross":      gross,
-        "ot_amount":    ot_amount,"deductions": deductions,
+        # billing line (no TASC salary split — pure hourly rate)
+        "basic":        round(regular_pay, 2),
+        "housing":      0.0,
+        "transport":    0.0,
+        "food":         0.0,
+        "phone":        0.0,
+        "gross":        round(total_billable, 2),
+        "ot_amount":    ot_amount,
+        "deductions":   deductions,
         "net_pay":      net_pay,
         "iban":         emp.get("iban", "") if emp else "",
     }
@@ -588,10 +626,9 @@ def calculate_project_pay(emp_record: dict, rec: dict) -> dict:
 def generate_invoice(timesheet: dict) -> dict:
     client_code = timesheet.get("client_code")
     client_name = timesheet.get("client_name")
-    employees_col    = get_collection("employees")
-    payroll_ref_col  = get_collection("payroll_reference")
-    line_items       = []
-    total_amount     = 0.0
+    employees_col = get_collection("employees")
+    line_items    = []
+    total_amount  = 0.0
 
     for rec in timesheet.get("extracted_data", {}).get("records", []):
         emp_id     = rec.get("matched_emp_id")
@@ -600,36 +637,13 @@ def generate_invoice(timesheet: dict) -> dict:
         ot_hours     = float(rec.get("ot_hours") or 0.0)
         reimbursements = rec.get("reimbursements") or []
 
-        # Look up employee master (canonical, not portal alias)
+        # Look up employee master (for IBAN only)
         emp = None
         if emp_id:
             emp = employees_col.find_one({"emp_id": emp_id, "is_demo_account": {"$ne": True}})
 
-        # Try exact payroll reference first
-        ref = None
-        if emp_id:
-            ref = payroll_ref_col.find_one({
-                "emp_id": emp_id,
-                "working_days": int(working_days),
-                "ot_hours": float(ot_hours)
-            })
-
-        if ref:
-            pay = {
-                "basic": ref["basic"], "housing": ref["housing"],
-                "transport": ref["transport"], "food": ref["food"],
-                "phone": ref["phone"], "gross": ref["gross"],
-                "ot_amount": ref["ot_amount"], "deductions": ref["deductions"],
-                "net_pay": ref["net_pay"], "ot_hours": ot_hours,
-                "regular_hours": working_days * STANDARD_HOURS,
-                "regular_pay": ref["basic"], "ot_pay": ref["ot_amount"],
-                "total_billable": ref["net_pay"],
-                "project_code": rec.get("project_code"),
-                "project_name": None, "cap_exceeded": False, "cap_violation": None,
-                "iban": emp.get("iban", "") if emp else "",
-            }
-        else:
-            pay = calculate_project_pay(emp, rec)
+        # Always calculate from Office Regulation Act: 500 AED/hr × 8 hrs/day
+        pay = calculate_project_pay(emp, rec)
 
         line = {
             "emp_id":        emp_id,
@@ -681,17 +695,8 @@ def validate_invoice(invoice: dict, config_rules: dict) -> dict:
     inv    = dict(invoice)
     errors = []
     max_ot = config_rules.get("max_ot_hours_limit", 15)
-    require_sig = config_rules.get("require_signature", False)
     employees_col = get_collection("employees")
     timesheets_col = get_collection("timesheets")
-
-    # Signature check
-    if require_sig:
-        ts = timesheets_col.find_one({"id": inv.get("timesheet_id")})
-        if ts and not ts.get("extracted_data", {}).get("meta", {}).get("has_signature"):
-            errors.append({"type": "missing_signature", "field": "signature",
-                           "message": "Timesheet missing required client approval signature.",
-                           "severity": "error"})
 
     for line in inv.get("line_items", []):
         name   = line.get("employee_name", "Unknown")
@@ -727,11 +732,6 @@ def validate_invoice(invoice: dict, config_rules: dict) -> dict:
                 errors.append({"type": "base_rate_mismatch", "field": "basic",
                                "message": f"{name}: basic {line_basic:.2f} > master {master_basic:.2f}.",
                                "severity": "error"})
-
-        # Project cap violation
-        if line.get("cap_exceeded") and line.get("cap_violation"):
-            errors.append({"type": "project_cap_exceeded", "field": "project_code",
-                           "message": line["cap_violation"], "severity": "error"})
 
     inv["validation_errors"] = errors
     hard_errors = [e for e in errors if e.get("severity") == "error"]

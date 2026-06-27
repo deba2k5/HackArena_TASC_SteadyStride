@@ -147,6 +147,7 @@ export interface Timesheet {
   status: string;
   uploaded_at: string;
   uploaded_by: string;
+  overall_confidence?: number;
   extracted_data: {
     records: ExtractedRecord[];
     overall_confidence: number;

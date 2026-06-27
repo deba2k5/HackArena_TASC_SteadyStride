@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { api, fmtAED } from "@/lib/api";
@@ -73,6 +73,17 @@ export default function EmployeeTimesheetPortal() {
 
   const employee = employeeByEmail[0] ?? null;
 
+  // ── On mount: heal any stuck pending_review timesheets ────────────────────
+  useEffect(() => {
+    api.processPendingTimesheets()
+      .then(() => {
+        qc.invalidateQueries({ queryKey: ["timesheets"] });
+        qc.invalidateQueries({ queryKey: ["invoices"] });
+      })
+      .catch(() => {/* silent */});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const clientCode = employee?.client_code ?? "";
 
   const { data: timesheets = [], isLoading: tsLoading } = useQuery<Timesheet[]>({
@@ -98,15 +109,36 @@ export default function EmployeeTimesheetPortal() {
   // My timesheets / invoices only
   const myTimesheets = timesheets.filter((t) =>
     t.extracted_data?.records?.some(
-      (r) => r.emp_id === employee?.emp_id || r.matched_emp_id === employee?.emp_id
+      (r) => r.emp_id === employee?.emp_id ||
+             r.matched_emp_id === employee?.emp_id ||
+             (r as Record<string,unknown>).matched_emp_id === employee?.emp_id
     )
   );
   const myInvoices = invoices.filter((inv) =>
-    inv.line_items?.some((li) => (li as Record<string,unknown>).emp_id === employee?.emp_id)
+    inv.line_items?.some((li) => {
+      const l = li as Record<string, unknown>;
+      return l.emp_id === employee?.emp_id ||
+             l.matched_emp_id === employee?.emp_id;
+    })
   );
   const totalEarned = myInvoices.reduce((s, i) => s + (i.total_amount ?? 0), 0);
-  const pendingCount = myTimesheets.filter((t) => t.status === "pending_review").length;
-  const processedCount = myTimesheets.filter((t) => t.status === "processed").length;
+
+  // A timesheet is truly pending only if confidence < 90% AND status is pending_review
+  const effectiveStatus = (t: Timesheet) => {
+    const conf = t.overall_confidence ?? (t.extracted_data?.overall_confidence as number | undefined) ?? 0;
+    if (t.status === "pending_review" && conf >= 0.90) return "processed";
+    return t.status;
+  };
+
+  // Touchless: true if stored as touchless OR if auto-promoted (≥90% confidence, processed)
+  const effectiveTouchless = (t: Timesheet) => {
+    if (t.is_touchless) return true;
+    const conf = t.overall_confidence ?? (t.extracted_data?.overall_confidence as number | undefined) ?? 0;
+    return effectiveStatus(t) === "processed" && conf >= 0.90;
+  };
+
+  const pendingCount   = myTimesheets.filter((t) => effectiveStatus(t) === "pending_review").length;
+  const processedCount = myTimesheets.filter((t) => effectiveStatus(t) === "processed").length;
 
   // ── Upload form ───────────────────────────────────────────────────────────
   const [payPeriod, setPayPeriod] = useState("June 2026");
@@ -116,7 +148,6 @@ export default function EmployeeTimesheetPortal() {
   const [selectedInv, setSelectedInv] = useState<Invoice | null>(null);
   const [projectCode, setProjectCode] = useState("");
   const [workingDays, setWorkingDays] = useState("");
-  const [otHours, setOtHours] = useState("");
 
   // ── Query form ────────────────────────────────────────────────────────────
   const [queryInvId, setQueryInvId] = useState("");
@@ -163,7 +194,6 @@ export default function EmployeeTimesheetPortal() {
     if (employee && !enrichedText.includes("Emp ID")) {
       enrichedText = `Emp ID: ${employee.emp_id}\nEmployee Name: ${employee.full_name}\nClient: ${employee.client_name} (${clientCode})\nPay Period: ${payPeriod}` +
         (workingDays ? `\nWorking Days: ${workingDays}` : "") +
-        (otHours     ? `\nOT Hours: ${otHours}` : "") +
         (projectCode ? `\nProject Code: ${projectCode}` : "") +
         (enrichedText ? `\n\n${enrichedText}` : "");
     }
@@ -291,11 +321,7 @@ export default function EmployeeTimesheetPortal() {
                   <Input type="number" min={1} max={31} value={workingDays}
                     onChange={(e) => setWorkingDays(e.target.value)} placeholder="e.g. 24" />
                 </div>
-                <div className="space-y-1.5">
-                  <Label>Overtime Hours <span className="text-muted-foreground text-xs">(optional)</span></Label>
-                  <Input type="number" min={0} step={0.5} value={otHours}
-                    onChange={(e) => setOtHours(e.target.value)} placeholder="e.g. 2" />
-                </div>
+
                 <div className="space-y-1.5 sm:col-span-2">
                   <Label>Project Assignment <span className="text-muted-foreground text-xs">(optional — caps billing per Office Regulation)</span></Label>
                   <Select value={projectCode || "none"} onValueChange={(v) => setProjectCode(v === "none" ? "" : v)}>
@@ -330,8 +356,7 @@ export default function EmployeeTimesheetPortal() {
                   <div className="sm:col-span-2 rounded-lg bg-indigo-500/5 border border-indigo-100 p-3 text-xs">
                     <p className="font-semibold text-indigo-700 mb-1">💡 Pay Estimate (Office Regulation Act)</p>
                     <p className="text-muted-foreground">
-                      Regular: {workingDays} days × 8 hrs × AED 500 = <strong>AED {(Number(workingDays) * 8 * 500).toLocaleString()}</strong>
-                      {otHours ? ` + OT: ${otHours} hrs × AED 750 = AED ${(Number(otHours) * 750).toLocaleString()}` : ""}
+                      {workingDays} days × 8 hrs × AED 500/hr = <strong>AED {(Number(workingDays) * 8 * 500).toLocaleString()}</strong>
                       {projectCode ? ` (Project ${projectCode} cap applies)` : ""}
                     </p>
                   </div>
@@ -383,13 +408,13 @@ export default function EmployeeTimesheetPortal() {
                         <TableCell className="font-medium">{ts.pay_period}</TableCell>
                         <TableCell className="capitalize">{ts.input_type}</TableCell>
                         <TableCell>
-                          <Badge variant="outline" className={`text-xs ${TS_STATUS[ts.status] ?? "bg-muted text-muted-foreground"}`}>
-                            {ts.status.replace(/_/g, " ")}
+                          <Badge variant="outline" className={`text-xs ${TS_STATUS[effectiveStatus(ts)] ?? "bg-muted text-muted-foreground"}`}>
+                            {effectiveStatus(ts).replace(/_/g, " ")}
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <Badge variant="outline" className={`text-xs ${ts.is_touchless ? "bg-green-500/15 text-green-700 border-green-200" : "bg-muted text-muted-foreground"}`}>
-                            {ts.is_touchless ? "Yes" : "No"}
+                          <Badge variant="outline" className={`text-xs ${effectiveTouchless(ts) ? "bg-green-500/15 text-green-700 border-green-200" : "bg-muted text-muted-foreground"}`}>
+                            {effectiveTouchless(ts) ? "Yes" : "No"}
                           </Badge>
                         </TableCell>
                         <TableCell>{((ts.extracted_data?.overall_confidence ?? 0) * 100).toFixed(0)}%</TableCell>
@@ -585,7 +610,6 @@ export default function EmployeeTimesheetPortal() {
                         <TableHead>Name</TableHead>
                         <TableHead className="text-right">Days</TableHead>
                         <TableHead className="text-right">Basic</TableHead>
-                        <TableHead className="text-right">OT Amt</TableHead>
                         <TableHead className="text-right">Deductions</TableHead>
                         <TableHead className="text-right">Net Pay</TableHead>
                       </TableRow>
@@ -599,7 +623,6 @@ export default function EmployeeTimesheetPortal() {
                             <TableCell>{String(l.employee_name ?? l.full_name ?? "—")}</TableCell>
                             <TableCell className="text-right">{String(l.working_days ?? l.days_worked ?? "—")}</TableCell>
                             <TableCell className="text-right">{l.basic != null ? `AED ${Number(l.basic).toLocaleString()}` : "—"}</TableCell>
-                            <TableCell className="text-right text-blue-700">{l.ot_amount != null ? `AED ${Number(l.ot_amount).toLocaleString()}` : "—"}</TableCell>
                             <TableCell className="text-right text-red-600">{l.deductions != null ? `AED ${Number(l.deductions).toLocaleString()}` : "—"}</TableCell>
                             <TableCell className="text-right font-bold text-green-700">{l.net_pay != null ? `AED ${Number(l.net_pay).toLocaleString()}` : "—"}</TableCell>
                           </TableRow>

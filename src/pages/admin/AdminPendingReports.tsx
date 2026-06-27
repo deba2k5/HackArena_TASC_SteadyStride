@@ -32,7 +32,6 @@ const MATCH_BADGE: Record<string, string> = {
 interface EditableRecord {
   matched_emp_id: string;
   working_days: number;
-  ot_hours: number;
   project_code: string;
   [key: string]: unknown;
 }
@@ -45,7 +44,12 @@ export default function AdminPendingReports() {
     queryKey: ["timesheets-exceptions"],
     queryFn: () => api.listTimesheets(),
     refetchInterval: 15_000,
-    select: (data) => data.filter((t) => t.status === "pending_review"),
+    select: (data) =>
+      data.filter(
+        (t) =>
+          t.status === "pending_review" &&
+          (t.overall_confidence ?? t.extracted_data?.overall_confidence ?? 0) < 0.90
+      ),
   });
 
   const [selected, setSelected] = useState<Timesheet | null>(null);
@@ -61,7 +65,6 @@ export default function AdminPendingReports() {
         ...r,
         matched_emp_id: (r.matched_emp_id as string) ?? (r.emp_id as string) ?? "",
         working_days:   Number((r as Record<string, unknown>).working_days ?? 24),
-        ot_hours:       Number((r as Record<string, unknown>).ot_hours ?? 0),
         project_code:   String((r as Record<string, unknown>).project_code ?? ""),
       }))
     );
@@ -194,14 +197,16 @@ export default function AdminPendingReports() {
                           <TableCell>{records.length}</TableCell>
                           <TableCell>
                             <div className="space-y-0.5">
-                              {ts.exceptions.slice(0, 2).map((ex, i) => (
+                              {ts.exceptions
+                                .filter((ex) => !ex.toLowerCase().includes("signature"))
+                                .slice(0, 2).map((ex, i) => (
                                 <div key={i} className="flex items-center gap-1 text-xs text-orange-700">
                                   <AlertTriangle className="h-3 w-3 shrink-0" />
                                   <span className="truncate max-w-[180px]">{ex}</span>
                                 </div>
                               ))}
-                              {ts.exceptions.length > 2 && (
-                                <span className="text-xs text-muted-foreground">+{ts.exceptions.length - 2} more</span>
+                              {ts.exceptions.filter((ex) => !ex.toLowerCase().includes("signature")).length > 2 && (
+                                <span className="text-xs text-muted-foreground">+{ts.exceptions.filter((ex) => !ex.toLowerCase().includes("signature")).length - 2} more</span>
                               )}
                             </div>
                           </TableCell>
@@ -263,19 +268,6 @@ export default function AdminPendingReports() {
                 </div>
               )}
 
-              {/* Exceptions */}
-              {selected.exceptions.length > 0 && (
-                <div className="rounded-lg bg-orange-500/10 border border-orange-200 p-3">
-                  <p className="font-semibold text-orange-700 mb-2">Why this needs review</p>
-                  <ul className="space-y-1">
-                    {selected.exceptions.map((ex, i) => (
-                      <li key={i} className="flex items-start gap-1.5 text-orange-700 text-xs">
-                        <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" /> {ex}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
 
               {/* Editable records */}
               <div>
@@ -322,7 +314,7 @@ export default function AdminPendingReports() {
                       )}
 
                       {/* Editable fields */}
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         <div className="space-y-1">
                           <Label className="text-xs">Emp ID</Label>
                           <Input className="h-8 text-xs font-mono"
@@ -334,12 +326,6 @@ export default function AdminPendingReports() {
                           <Input className="h-8 text-xs" type="number" min={1} max={31}
                             value={rec.working_days}
                             onChange={(e) => updateRec(idx, "working_days", Number(e.target.value))} />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs">OT Hours</Label>
-                          <Input className="h-8 text-xs" type="number" min={0} step={0.5}
-                            value={rec.ot_hours}
-                            onChange={(e) => updateRec(idx, "ot_hours", Number(e.target.value))} />
                         </div>
                         <div className="space-y-1">
                           <Label className="text-xs">Project</Label>

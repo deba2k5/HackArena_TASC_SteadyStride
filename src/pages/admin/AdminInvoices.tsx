@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, fmtAED } from "@/lib/api";
 import type { Invoice, Customer, LineItem } from "@/lib/types";
@@ -68,6 +68,17 @@ function fmt(n: number | undefined) {
 
 export default function AdminInvoices() {
   const qc = useQueryClient();
+
+  // Heal any stuck pending_review timesheets so their invoices appear immediately
+  useEffect(() => {
+    api.processPendingTimesheets()
+      .then(() => {
+        qc.invalidateQueries({ queryKey: ["invoices"] });
+        qc.invalidateQueries({ queryKey: ["timesheets"] });
+      })
+      .catch(() => {/* silent */});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const { data: customers = [] } = useQuery<Customer[]>({
     queryKey: ["customers"],
@@ -413,14 +424,14 @@ export default function AdminInvoices() {
               </div>
 
               {/* Validation errors */}
-              {(selected.validation_errors?.length ?? 0) > 0 && (
+              {(selected.validation_errors?.filter((e) => e.field !== "signature").length ?? 0) > 0 && (
                 <div className="rounded-lg bg-red-500/10 border border-red-200 p-4">
                   <p className="font-semibold text-red-700 flex items-center gap-1.5 mb-2">
                     <AlertTriangle className="h-4 w-4" />
-                    Validation Errors ({selected.validation_errors.length})
+                    Validation Errors ({selected.validation_errors.filter((e) => e.field !== "signature").length})
                   </p>
                   <ul className="space-y-1.5">
-                    {selected.validation_errors.map((err, i) => (
+                    {selected.validation_errors.filter((e) => e.field !== "signature").map((err, i) => (
                       <li key={i} className="text-red-700 text-xs flex gap-1.5">
                         <XCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
                         <span>

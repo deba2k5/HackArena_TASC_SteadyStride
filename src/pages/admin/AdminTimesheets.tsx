@@ -248,12 +248,12 @@ export default function AdminTimesheets() {
                           <Badge
                             variant="outline"
                             className={
-                              ts.is_touchless
+                              (ts.is_touchless || (ts.status === "processed" && (ts.overall_confidence ?? ts.extracted_data?.overall_confidence ?? 0) >= 0.90))
                                 ? "text-xs bg-green-500/15 text-green-600 border-green-200"
                                 : "text-xs bg-muted text-muted-foreground"
                             }
                           >
-                            {ts.is_touchless ? "Yes" : "No"}
+                            {(ts.is_touchless || (ts.status === "processed" && (ts.overall_confidence ?? ts.extracted_data?.overall_confidence ?? 0) >= 0.90)) ? "Yes" : "No"}
                           </Badge>
                         </TableCell>
                         <TableCell>
@@ -310,12 +310,12 @@ export default function AdminTimesheets() {
                 </div>
                 <div>
                   <span className="text-muted-foreground">Touchless:</span>{" "}
-                  <strong>{selected.is_touchless ? "Yes" : "No"}</strong>
+                  <strong>{(selected.is_touchless || (selected.status === "processed" && (selected.overall_confidence ?? selected.extracted_data?.overall_confidence ?? 0) >= 0.90)) ? "Yes" : "No"}</strong>
                 </div>
                 <div>
                   <span className="text-muted-foreground">Confidence:</span>{" "}
                   <strong>
-                    {(selected.extracted_data?.overall_confidence * 100 ?? 0).toFixed(1)}%
+                    {((selected.extracted_data?.overall_confidence ?? 0) * 100).toFixed(1)}%
                   </strong>
                 </div>
                 <div>

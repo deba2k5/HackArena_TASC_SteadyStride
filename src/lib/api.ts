@@ -196,6 +196,11 @@ export const api = {
     return request(`/metrics`);
   },
 
+  /** POST /api/timesheets/process-pending — heal stuck records */
+  async processPendingTimesheets(): Promise<{ promoted: number; ids: string[] }> {
+    return request(`/timesheets/process-pending`, { method: "POST" });
+  },
+
   /** GET /api/timesheets?client_code=... */
   async listTimesheets(clientCode?: string): Promise<Timesheet[]> {
     const qs = clientCode ? `?client_code=${encodeURIComponent(clientCode)}` : "";

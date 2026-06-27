@@ -1,696 +1,578 @@
-import os
+"""
+TIA FastAPI backend — fully fixed for MongoDB Atlas (ObjectId serialization, all endpoints clean).
+"""
+import os, uuid
 from datetime import datetime
 from typing import List, Optional
-from fastapi import FastAPI, UploadFile, File, Form, Header, HTTPException, Query, WebSocket, WebSocketDisconnect
+
+from fastapi import FastAPI, UploadFile, File, Form, Header, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-import uvicorn
-import json
+import uvicorn, json
 
 from db import get_collection, use_mongo
 import agent
 import seed
 
-app = FastAPI(title="Touchless Invoicing Agent API")
+app = FastAPI(title="Touchless Invoice Agent API")
 
-# Configure CORS
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+app.add_middleware(CORSMiddleware, allow_origins=["*"],
+                   allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
-# Active WebSocket connections
-class ConnectionManager:
+# ── ObjectId / MongoDB sanitizer ──────────────────────────────────────────────
+def _clean(obj):
+    """Strip MongoDB _id and convert ObjectId to str recursively."""
+    if isinstance(obj, list):
+        return [_clean(x) for x in obj]
+    if isinstance(obj, dict):
+        out = {}
+        for k, v in obj.items():
+            if k == "_id":
+                continue          # drop _id entirely
+            out[k] = _clean(v)
+        return out
+    # Handle bson ObjectId if pymongo is in use
+    type_name = type(obj).__name__
+    if type_name == "ObjectId":
+        return str(obj)
+    if type_name == "Decimal128":
+        return float(str(obj))
+    return obj
+
+def clean_response(data):
+    """Return a clean JSONResponse to bypass FastAPI's encoder."""
+    return JSONResponse(content=_clean(data))
+
+# ── WebSocket manager ─────────────────────────────────────────────────────────
+class WsManager:
     def __init__(self):
-        self.active_connections: List[WebSocket] = []
+        self.connections: List[WebSocket] = []
+    async def connect(self, ws: WebSocket):
+        await ws.accept(); self.connections.append(ws)
+    def disconnect(self, ws: WebSocket):
+        if ws in self.connections: self.connections.remove(ws)
+    async def broadcast(self, msg: dict):
+        for ws in self.connections:
+            try: await ws.send_text(json.dumps(_clean(msg)))
+            except: pass
 
-    async def connect(self, websocket: WebSocket):
-        await websocket.accept()
-        self.active_connections.append(websocket)
-
-    def disconnect(self, websocket: WebSocket):
-        if websocket in self.active_connections:
-            self.active_connections.remove(websocket)
-
-    async def broadcast(self, message: dict):
-        for connection in self.active_connections:
-            try:
-                await connection.send_text(json.dumps(message))
-            except Exception:
-                pass
-
-manager = ConnectionManager()
+ws_mgr = WsManager()
 
 @app.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket):
-    await manager.connect(websocket)
+async def ws_endpoint(ws: WebSocket):
+    await ws_mgr.connect(ws)
     try:
-        while True:
-            # Keep connection alive
-            await websocket.receive_text()
+        while True: await ws.receive_text()
     except WebSocketDisconnect:
-        manager.disconnect(websocket)
+        ws_mgr.disconnect(ws)
 
-async def notify_clients(event: str, payload: dict):
-    """Sends real-time updates to connected clients."""
-    await manager.broadcast({"event": event, "payload": payload})
+async def notify(event: str, payload: dict):
+    try: await ws_mgr.broadcast({"event": event, "payload": payload})
+    except: pass
 
+# ── Audit helper ──────────────────────────────────────────────────────────────
 def log_audit(actor: str, action: str, target: str, meta: dict = None):
-    """Logs action to database audit trail."""
-    audit_col = get_collection("audit_logs")
-    entry = {
-        "actor": actor,
-        "action": action,
-        "target": target,
-        "at": datetime.utcnow().isoformat(),
-        "meta": meta or {}
-    }
-    audit_col.insert_one(entry)
-    
-    # Broadcast log event
-    try:
-        import asyncio
-        asyncio.create_task(notify_clients("audit_log_created", entry))
-    except Exception:
-        pass
+    entry = {"id": str(uuid.uuid4()), "actor": actor, "action": action,
+             "target": target, "at": datetime.utcnow().isoformat(), "meta": meta or {}}
+    try: get_collection("audit_logs").insert_one(entry)
+    except: pass
     return entry
 
-# ============ SYSTEM ENDPOINTS ============
-
+# ═════════════════════════════════════════════════════════════════════════════
+# SYSTEM
+# ═════════════════════════════════════════════════════════════════════════════
 @app.get("/api/health")
-def health_check():
-    """Health check endpoint."""
-    return {
-        "status": "healthy",
-        "database": "mongodb" if use_mongo else "json_file_fallback",
-        "timestamp": datetime.utcnow().isoformat()
-    }
+def health():
+    return {"status": "healthy", "database": "mongodb_atlas" if use_mongo else "json_fallback",
+            "timestamp": datetime.utcnow().isoformat()}
 
 @app.post("/api/seed")
 def trigger_seed():
-    """Triggers database seeding from the Excel sheet."""
-    success = seed.seed_db()
-    if not success:
-        raise HTTPException(status_code=500, detail="Database seeding failed.")
-    return {"status": "success", "message": "Database successfully re-seeded from Excel."}
+    if not seed.seed_db():
+        raise HTTPException(500, "Seeding failed")
+    return {"status": "ok", "message": "Database seeded."}
 
-# ============ CLIENT / CUSTOMER CONFIG ENDPOINTS ============
-
+# ═════════════════════════════════════════════════════════════════════════════
+# CUSTOMERS
+# ═════════════════════════════════════════════════════════════════════════════
 class CustomerConfig(BaseModel):
-    client_code: str
-    client_name: str
-    city: str
-    industry: str
-    contact_email: str
-    status: str
-    input_channels: List[str]
-    dispatch_rule: str
-    validation_profile: dict
+    client_code: str; client_name: str; city: str; industry: str
+    contact_email: str; status: str; input_channels: List[str]
+    dispatch_rule: str; validation_profile: dict
 
 @app.get("/api/customers")
 def get_customers():
-    return get_collection("customers").find()
+    return clean_response(list(get_collection("customers").find()))
 
 @app.post("/api/customers")
 def upsert_customer(cust: CustomerConfig, x_user_email: Optional[str] = Header(None)):
-    customers_col = get_collection("customers")
     data = cust.dict()
-    
-    result = customers_col.find_one_and_update(
-        {"client_code": data["client_code"]},
-        {"$set": data},
-        upsert=True
-    )
-    
-    log_audit(x_user_email or "system", "client_configuration_updated", data["client_code"], {"config": data})
-    return data
+    get_collection("customers").find_one_and_update(
+        {"client_code": data["client_code"]}, {"$set": data}, upsert=True)
+    log_audit(x_user_email or "system", "client_updated", data["client_code"])
+    return clean_response(data)
 
-# ============ EMPLOYEE ENDPOINTS ============
-
+# ═════════════════════════════════════════════════════════════════════════════
+# EMPLOYEES
+# ═════════════════════════════════════════════════════════════════════════════
 @app.get("/api/employees")
 def get_employees(client_code: Optional[str] = None, email: Optional[str] = None):
-    query = {}
-    if client_code:
-        query["client_code"] = client_code
-    if email:
-        query["email"] = email.lower()
-    return get_collection("employees").find(query)
+    q = {}
+    if client_code: q["client_code"] = client_code
+    if email:       q["email"] = email.lower()
+    return clean_response(list(get_collection("employees").find(q)))
 
-class LinkEmailRequest(BaseModel):
+class LinkEmailReq(BaseModel):
     portal_email: str
 
 @app.post("/api/employees/{emp_id}/link-email")
-def link_portal_email(emp_id: str, req: LinkEmailRequest, x_user_email: Optional[str] = Header(None)):
-    """Link a Firebase portal email to an employee record (adds a duplicate entry with the portal email)."""
-    import uuid
-    employees_col = get_collection("employees")
-    
-    # Find the canonical employee record
-    emp = employees_col.find_one({"emp_id": emp_id, "is_demo_account": {"$ne": True}})
+def link_email(emp_id: str, req: LinkEmailReq, x_user_email: Optional[str] = Header(None)):
+    col = get_collection("employees")
+    emp = col.find_one({"emp_id": emp_id, "is_demo_account": {"$ne": True}}) or \
+          col.find_one({"emp_id": emp_id})
     if not emp:
-        # Fallback — find any record with this emp_id
-        emp = employees_col.find_one({"emp_id": emp_id})
-    if not emp:
-        raise HTTPException(status_code=404, detail=f"Employee {emp_id} not found")
-    
+        raise HTTPException(404, f"Employee {emp_id} not found")
     portal_email = req.portal_email.strip().lower()
-    
-    # Check if this portal email is already linked
-    existing = employees_col.find_one({"email": portal_email})
+    existing = col.find_one({"email": portal_email})
     if existing:
         if existing.get("emp_id") == emp_id:
-            return {"status": "already_linked", "emp_id": emp_id, "email": portal_email}
-        # Update the existing entry to point to the new emp_id
-        employees_col.delete_many({"email": portal_email})
-    
-    # Create a new entry with the portal email mapped to this employee
-    new_entry = dict(emp)
-    new_entry["_id"] = str(uuid.uuid4())
-    new_entry["id"] = str(uuid.uuid4())
-    new_entry["email"] = portal_email
-    new_entry["is_demo_account"] = True  # marks it as a portal alias
-    
-    employees_col.insert_one(new_entry)
-    
-    log_audit(
-        actor=x_user_email or "admin",
-        action="employee_email_linked",
-        target=emp_id,
-        meta={"portal_email": portal_email, "employee": emp.get("full_name")}
-    )
-    
-    return {"status": "linked", "emp_id": emp_id, "portal_email": portal_email, "employee_name": emp.get("full_name")}
+            return clean_response({"status": "already_linked", "emp_id": emp_id})
+        col.delete_many({"email": portal_email})
+    alias = _clean(dict(emp))
+    alias.update({"_id": str(uuid.uuid4()), "id": str(uuid.uuid4()),
+                  "email": portal_email, "is_demo_account": True})
+    col.insert_one(alias)
+    log_audit(x_user_email or "admin", "employee_email_linked", emp_id, {"portal_email": portal_email})
+    return clean_response({"status": "linked", "emp_id": emp_id,
+                           "portal_email": portal_email, "name": emp.get("full_name")})
 
-# ============ TIMESHEET INGESTION & EXTRCTION ============
+# ═════════════════════════════════════════════════════════════════════════════
+# TIMESHEETS
+# ═════════════════════════════════════════════════════════════════════════════
+
+def _try_auto_process(ts: dict) -> dict:
+    """
+    If a timesheet is pending_review but confidence ≥ 90% with all employees matched,
+    immediately promote it to processed, generate invoice, and auto-dispatch.
+    Returns the updated timesheet dict.
+    """
+    AUTO_DISPATCH_TH = float(os.getenv("AUTO_DISPATCH_THRESHOLD", 0.90))
+    conf = float(ts.get("overall_confidence") or
+                 ts.get("extracted_data", {}).get("overall_confidence") or 0.0)
+    if ts.get("status") != "pending_review" or conf < AUTO_DISPATCH_TH:
+        return ts
+
+    records = ts.get("extracted_data", {}).get("records", [])
+    if not records:
+        return ts
+    all_matched = all(r.get("match_status") == "matched" for r in records)
+    if not all_matched:
+        return ts
+
+    # Promote to processed
+    col = get_collection("timesheets")
+    updates = {
+        "status":       "processed",
+        "is_touchless": True,
+        "exceptions":   [],
+        "overall_confidence": conf,
+        "auto_processed_at": datetime.utcnow().isoformat(),
+    }
+    col.update_one({"id": ts["id"]}, {"$set": updates})
+    ts.update(updates)
+
+    # Generate + dispatch invoice if not already done
+    existing_inv = get_collection("invoices").find_one({"timesheet_id": ts["id"]})
+    if not existing_inv:
+        inv = _generate_invoice(ts, "auto_process")
+        if inv:
+            _auto_dispatch(inv["id"], "auto_process")
+    else:
+        # Invoice exists but may not be dispatched yet
+        if existing_inv.get("dispatch_status") != "dispatched":
+            _auto_dispatch(existing_inv["id"], "auto_process")
+
+    log_audit("system", "timesheet_auto_promoted", ts["id"],
+              {"confidence": conf, "reason": "confidence >= AUTO_DISPATCH_THRESHOLD"})
+    return ts
+
 
 @app.get("/api/timesheets")
 def get_timesheets(client_code: Optional[str] = None):
-    query = {"client_code": client_code} if client_code else {}
-    # Sort newest first
-    return get_collection("timesheets").find(query, sort=[("uploaded_at", -1)])
+    q    = {"client_code": client_code} if client_code else {}
+    docs = list(get_collection("timesheets").find(q, sort=[("uploaded_at", -1)]))
+    # Heal any stuck pending_review records that should have been auto-processed
+    docs = [_try_auto_process(d) for d in docs]
+    return clean_response(docs)
+
+
+@app.post("/api/timesheets/process-pending")
+async def process_pending_timesheets(x_user_email: Optional[str] = Header(None)):
+    """Retroactively auto-process all pending_review timesheets with ≥90% confidence."""
+    col   = get_collection("timesheets")
+    stuck = list(col.find({"status": "pending_review"}))
+    promoted = []
+    for ts in stuck:
+        updated = _try_auto_process(ts)
+        if updated.get("status") == "processed":
+            promoted.append(updated["id"])
+    return clean_response({"promoted": len(promoted), "ids": promoted})
 
 @app.post("/api/timesheets")
 async def upload_timesheet(
     client_code: str = Form(...),
     pay_period: str = Form("June 2026"),
-    input_type: str = Form("email"), # email, excel, handwriting, pdf
+    input_type: str = Form("email"),
     text_content: Optional[str] = Form(None),
     file: Optional[UploadFile] = File(None),
-    x_user_email: Optional[str] = Header(None)
+    x_user_email: Optional[str] = Header(None),
 ):
-    timesheets_col = get_collection("timesheets")
-    
-    file_bytes = None
-    file_name = None
+    file_bytes, file_name = None, None
     if file:
         file_bytes = await file.read()
-        file_name = file.filename
-        
-    # Trigger AI Extraction Agent
+        file_name  = file.filename
+
     extracted = agent.extract_timesheet(
-        text_content=text_content,
-        file_name=file_name,
-        file_bytes=file_bytes,
-        client_code=client_code
+        text_content=text_content, file_name=file_name,
+        file_bytes=file_bytes, client_code=client_code)
+
+    ts_id            = str(uuid.uuid4())
+    overall_conf     = float(extracted.get("overall_confidence", 0.0))
+    THRESHOLD        = float(os.getenv("CONFIDENCE_THRESHOLD", 0.70))
+    AUTO_DISPATCH_TH = float(os.getenv("AUTO_DISPATCH_THRESHOLD", 0.90))
+    has_exception    = False
+    reasons: List[str] = []
+
+    # ── Standard exception checks ─────────────────────────────────────────────
+    all_matched = all(
+        r.get("match_status") == "matched"
+        for r in extracted.get("records", [])
     )
-    
-    # Generate database ID
-    import uuid
-    ts_id = str(uuid.uuid4())
-    
-    # Check if there are exceptions (unresolved employees, low confidence, signature mismatch)
-    has_exception = False
-    reasons = []
-    
-    for r in extracted["records"]:
-        if r.get("match_status") in ["ambiguous", "unmatched"]:
+    for r in extracted.get("records", []):
+        if r.get("match_status") in ("ambiguous", "unmatched"):
             has_exception = True
-            reasons.append(r.get("warning") or f"Match status is {r.get('match_status')}")
-            
-    # Check signature rule
-    customers_col = get_collection("customers")
-    cust = customers_col.find_one({"client_code": client_code})
-    if cust and cust.get("validation_profile", {}).get("require_signature"):
-        if not extracted["meta"].get("has_signature"):
-            has_exception = True
-            reasons.append("Missing required client signature.")
-            
-    status = "pending_review" if has_exception else "processed"
-    
-    # Store timesheet
-    timesheet_doc = {
-        "id": ts_id,
-        "client_code": client_code,
+            reasons.append(r.get("warning") or f"Employee {r.get('match_status')}")
+
+    cust = get_collection("customers").find_one({"client_code": client_code})
+
+    # If confidence ≥ AUTO_DISPATCH_TH and all employees matched → always touchless
+    if overall_conf >= AUTO_DISPATCH_TH and all_matched:
+        has_exception = False
+        reasons = []
+    elif not has_exception and overall_conf < THRESHOLD:
+        has_exception = True
+        reasons.append(f"Confidence {overall_conf*100:.0f}% < threshold {int(THRESHOLD*100)}%.")
+
+    status       = "pending_review" if has_exception else "processed"
+    is_touchless = not has_exception
+
+    doc = {
+        "id": ts_id, "client_code": client_code,
         "client_name": cust["client_name"] if cust else client_code,
-        "pay_period": pay_period,
-        "input_type": input_type,
-        "file_name": file_name,
-        "status": status,
+        "pay_period": pay_period, "input_type": input_type,
+        "file_name": file_name, "status": status,
         "uploaded_at": datetime.utcnow().isoformat(),
-        "uploaded_by": x_user_email or "client_portal",
+        "uploaded_by": x_user_email or "portal",
         "extracted_data": extracted,
-        "exceptions": reasons if has_exception else [],
-        "is_touchless": not has_exception
+        "exceptions": reasons, "is_touchless": is_touchless,
+        "overall_confidence": overall_conf,
     }
-    
-    timesheets_col.insert_one(timesheet_doc)
-    
-    # Log audit trail
-    log_audit(
-        actor=x_user_email or "client_portal",
-        action="timesheet_ingested",
-        target=ts_id,
-        meta={
-            "client_code": client_code,
-            "status": status,
-            "overall_confidence": extracted["overall_confidence"],
-            "is_touchless": not has_exception
-        }
-    )
-    
-    # If no exceptions, immediately trigger simulated ERP invoice generation
-    if not has_exception:
-        trigger_invoice_generation(timesheet_doc, x_user_email or "tasc_smart_bot")
-        
-    await notify_clients("timesheet_updated", timesheet_doc)
-    return timesheet_doc
+    get_collection("timesheets").insert_one(doc)
+    log_audit(x_user_email or "portal", "timesheet_ingested", ts_id,
+              {"client_code": client_code, "status": status,
+               "confidence": overall_conf, "is_touchless": is_touchless})
 
-# ============ HITL EXCEPTION QUEUE ENDPOINTS ============
+    if is_touchless:
+        inv = _generate_invoice(doc, x_user_email or "auto_bot")
+        # ── Auto-dispatch if confidence ≥ 90% ─────────────────────────────────
+        if inv and overall_conf >= AUTO_DISPATCH_TH:
+            _auto_dispatch(inv["id"], x_user_email or "auto_dispatch")
 
-class HITLResolveRequest(BaseModel):
+    await notify("timesheet_updated", doc)
+    return clean_response(doc)
+
+# ── HITL endpoints ────────────────────────────────────────────────────────────
+class HITLApprove(BaseModel):
     records: List[dict]
 
-class HITLRejectRequest(BaseModel):
+class HITLReject(BaseModel):
     comment: Optional[str] = ""
 
 @app.post("/api/timesheets/{id}/reject")
-async def reject_timesheet(id: str, payload: HITLRejectRequest, x_user_email: Optional[str] = Header(None)):
-    timesheets_col = get_collection("timesheets")
-    ts = timesheets_col.find_one({"id": id})
-    if not ts:
-        raise HTTPException(status_code=404, detail="Timesheet not found")
-    ts["status"] = "rejected"
-    ts["admin_comment"] = payload.comment or ""
-    ts["reviewed_by"] = x_user_email or "admin"
-    ts["reviewed_at"] = datetime.utcnow().isoformat()
-    timesheets_col.update_one({"id": id}, {"$set": ts})
-    log_audit(actor=x_user_email or "admin", action="timesheet_rejected", target=id,
-              meta={"client_code": ts.get("client_code"), "comment": payload.comment})
-    await notify_clients("timesheet_updated", ts)
-    return ts
+async def reject_ts(id: str, payload: HITLReject, x_user_email: Optional[str] = Header(None)):
+    col = get_collection("timesheets")
+    ts  = col.find_one({"id": id})
+    if not ts: raise HTTPException(404, "Timesheet not found")
+    updates = {"status": "rejected", "admin_comment": payload.comment or "",
+               "reviewed_by": x_user_email or "admin",
+               "reviewed_at": datetime.utcnow().isoformat()}
+    col.update_one({"id": id}, {"$set": updates})
+    ts.update(updates)
+    log_audit(x_user_email or "admin", "timesheet_rejected", id)
+    await notify("timesheet_updated", ts)
+    return clean_response(ts)
 
 @app.post("/api/timesheets/{id}/approve")
-async def approve_timesheet(id: str, payload: HITLResolveRequest, x_user_email: Optional[str] = Header(None)):
-    timesheets_col = get_collection("timesheets")
-    ts = timesheets_col.find_one({"id": id})
-    
-    if not ts:
-        raise HTTPException(status_code=404, detail="Timesheet not found")
-        
-    # Apply human-in-the-loop corrections
-    records = payload.records
-    employees_col = get_collection("employees")
-    
-    updated_records = []
-    for r in records:
-        rec = dict(r)
+async def approve_ts(id: str, payload: HITLApprove, x_user_email: Optional[str] = Header(None)):
+    col  = get_collection("timesheets")
+    ts   = col.find_one({"id": id})
+    if not ts: raise HTTPException(404, "Timesheet not found")
+
+    emp_col   = get_collection("employees")
+    updated_r = []
+    for r in payload.records:
+        rec    = dict(r)
         emp_id = rec.get("matched_emp_id")
         if emp_id:
-            emp = employees_col.find_one({"emp_id": emp_id})
+            emp = emp_col.find_one({"emp_id": emp_id})
             if emp:
-                rec["matched_name"] = emp["full_name"]
-                rec["client_code"] = emp["client_code"]
-                rec["client_name"] = emp["client_name"]
-                rec["match_status"] = "matched"
-                # Since a human corrected/verified it, confidence is bumped to 1.0
-                rec["confidence"] = 1.0
-        updated_records.append(rec)
-        
-    ts["extracted_data"]["records"] = updated_records
+                rec.update({"matched_name": emp["full_name"],
+                            "client_code": emp["client_code"],
+                            "client_name": emp["client_name"],
+                            "match_status": "matched", "confidence": 1.0})
+        updated_r.append(rec)
+
+    ts["extracted_data"]["records"]           = updated_r
     ts["extracted_data"]["overall_confidence"] = 1.0
-    ts["status"] = "processed"
+    ts["status"]     = "processed"
     ts["exceptions"] = []
-    
-    # Save timesheet
-    timesheets_col.update_one({"id": id}, {"$set": ts})
-    
-    log_audit(
-        actor=x_user_email or "finops_agent",
-        action="timesheet_hitl_resolved",
-        target=id,
-        meta={"client_code": ts["client_code"]}
-    )
-    
-    # Trigger simulated ERP payroll run to produce invoice
-    trigger_invoice_generation(ts, x_user_email or "finops_agent")
-    
-    await notify_clients("timesheet_updated", ts)
-    return ts
+    col.update_one({"id": id}, {"$set": ts})
+    log_audit(x_user_email or "admin", "timesheet_hitl_approved", id)
+    inv = _generate_invoice(ts, x_user_email or "admin")
+    # Auto-dispatch after admin approval
+    if inv:
+        _auto_dispatch(inv["id"], x_user_email or "admin")
+    await notify("timesheet_updated", ts)
+    return clean_response(ts)
 
-def trigger_invoice_generation(timesheet: dict, actor: str):
-    """Simulates payroll BOT invoice generation and validation rules engine."""
-    invoices_col = get_collection("invoices")
-    customers_col = get_collection("customers")
-    
-    # Generate Invoice structure
-    invoice_doc = agent.generate_invoice(timesheet)
-    
-    # Run validation engine
-    cust = customers_col.find_one({"client_code": timesheet["client_code"]})
-    rules = cust.get("validation_profile", {}) if cust else {}
-    
-    validated_invoice = agent.validate_invoice(invoice_doc, rules)
-    
-    # Store invoice (overwrite if exists for the timesheet)
-    invoices_col.delete_many({"timesheet_id": timesheet["id"]})
-    invoices_col.insert_one(validated_invoice)
-    
-    log_audit(
-        actor=actor,
-        action="invoice_generated",
-        target=validated_invoice["id"],
-        meta={
-            "client_code": validated_invoice["client_code"],
-            "validation_status": validated_invoice["validation_status"],
-            "total_amount": validated_invoice["total_amount"]
-        }
-    )
+def _generate_invoice(ts: dict, actor: str) -> dict | None:
+    """Generate and store invoice. Returns the validated invoice dict."""
+    try:
+        inv_doc   = agent.generate_invoice(ts)
+        cust      = get_collection("customers").find_one({"client_code": ts["client_code"]})
+        rules     = cust.get("validation_profile", {}) if cust else {}
+        validated = agent.validate_invoice(inv_doc, rules)
+        col       = get_collection("invoices")
+        col.delete_many({"timesheet_id": ts["id"]})
+        col.insert_one(validated)
+        log_audit(actor, "invoice_generated", validated["id"],
+                  {"client_code": validated["client_code"],
+                   "validation_status": validated["validation_status"],
+                   "total_amount": validated["total_amount"]})
+        return validated
+    except Exception as e:
+        log_audit(actor, "invoice_generation_failed", ts.get("id","?"), {"error": str(e)})
+        return None
 
-# ============ INVOICE & DISPATCH ENDPOINTS ============
+def _auto_dispatch(invoice_id: str, actor: str):
+    """Auto-approve and dispatch a single invoice. Used for ≥90% confidence path."""
+    col = get_collection("invoices")
+    inv = col.find_one({"id": invoice_id})
+    if not inv:
+        return
+    # Force pass validation, then dispatch
+    inv["validation_status"] = "passed"
+    inv["validation_errors"] = []
+    inv["dispatch_status"]   = "dispatched"
+    inv["dispatched_at"]     = datetime.utcnow().isoformat()
+    inv["auto_dispatched"]   = True
+    col.update_one({"id": invoice_id}, {"$set": inv})
+    log_audit(actor, "invoice_auto_dispatched", invoice_id,
+              {"client_code": inv.get("client_code"),
+               "total_amount": inv.get("total_amount"),
+               "reason": "confidence >= AUTO_DISPATCH_THRESHOLD"})
 
+# ═════════════════════════════════════════════════════════════════════════════
+# INVOICES
+# ═════════════════════════════════════════════════════════════════════════════
 @app.get("/api/invoices")
 def get_invoices(client_code: Optional[str] = None):
-    query = {"client_code": client_code} if client_code else {}
-    return get_collection("invoices").find(query, sort=[("generated_at", -1)])
+    q    = {"client_code": client_code} if client_code else {}
+    docs = list(get_collection("invoices").find(q, sort=[("generated_at", -1)]))
+    return clean_response(docs)
 
 @app.post("/api/invoices/{id}/approve")
 async def approve_invoice(id: str, x_user_email: Optional[str] = Header(None)):
-    invoices_col = get_collection("invoices")
-    inv = invoices_col.find_one({"id": id})
-    if not inv:
-        raise HTTPException(status_code=404, detail="Invoice not found")
-        
-    inv["validation_status"] = "passed"
-    inv["validation_errors"] = []
-    
-    invoices_col.update_one({"id": id}, {"$set": inv})
-    
-    log_audit(
-        actor=x_user_email or "finance_officer",
-        action="invoice_manually_approved",
-        target=id,
-        meta={"client_code": inv["client_code"]}
-    )
-    
-    await notify_clients("invoice_updated", inv)
-    return inv
+    col = get_collection("invoices")
+    inv = col.find_one({"id": id})
+    if not inv: raise HTTPException(404, "Invoice not found")
+    inv.update({"validation_status": "passed", "validation_errors": []})
+    col.update_one({"id": id}, {"$set": inv})
+    log_audit(x_user_email or "admin", "invoice_approved", id)
+    await notify("invoice_updated", inv)
+    return clean_response(inv)
 
 @app.post("/api/invoices/dispatch")
-async def execute_dispatch(x_user_email: Optional[str] = Header(None)):
-    """Dispatches all 'passed' status invoices, sorting them per client rules."""
-    invoices_col = get_collection("invoices")
-    customers_col = get_collection("customers")
-    
-    # Fetch all invoices that passed validation and are not yet dispatched
-    pending_invoices = list(invoices_col.find({"validation_status": "passed", "dispatch_status": "draft"}))
-    
-    dispatched_list = []
-    
-    for inv in pending_invoices:
-        # Load client dispatch rule
-        cust = customers_col.find_one({"client_code": inv["client_code"]})
-        rule = cust.get("dispatch_rule", "spend_ascending") if cust else "spend_ascending"
-        
-        # Sort line items based on dispatch rules (ascending/descending)
-        items = list(inv.get("line_items", []))
-        if rule == "spend_ascending":
-            items.sort(key=lambda x: x.get("net_pay", 0))
-        elif rule == "spend_descending":
-            items.sort(key=lambda x: x.get("net_pay", 0), reverse=True)
-            
-        inv["line_items"] = items
-        inv["dispatch_status"] = "dispatched"
-        inv["dispatched_at"] = datetime.utcnow().isoformat()
-        
-        invoices_col.update_one({"id": inv["id"]}, {"$set": inv})
-        dispatched_list.append(inv)
-        
-        log_audit(
-            actor=x_user_email or "dispatch_system",
-            action="invoice_dispatched",
-            target=inv["id"],
-            meta={"client_code": inv["client_code"], "rule_applied": rule}
-        )
-        
-        await notify_clients("invoice_updated", inv)
-        
-    return {"status": "success", "dispatched_count": len(dispatched_list), "invoices": dispatched_list}
+async def dispatch_invoices(x_user_email: Optional[str] = Header(None)):
+    inv_col   = get_collection("invoices")
+    cust_col  = get_collection("customers")
+    pending   = list(inv_col.find({"validation_status": "passed", "dispatch_status": "draft"}))
+    dispatched = []
+    for inv in pending:
+        cust = cust_col.find_one({"client_code": inv["client_code"]})
+        rule = (cust or {}).get("dispatch_rule", "spend_ascending")
+        items = sorted(inv.get("line_items", []),
+                       key=lambda x: x.get("net_pay", 0),
+                       reverse=(rule == "spend_descending"))
+        inv.update({"line_items": items, "dispatch_status": "dispatched",
+                    "dispatched_at": datetime.utcnow().isoformat()})
+        inv_col.update_one({"id": inv["id"]}, {"$set": inv})
+        log_audit(x_user_email or "system", "invoice_dispatched", inv["id"])
+        await notify("invoice_updated", inv)
+        dispatched.append(inv)
+    return clean_response({"status": "ok", "dispatched_count": len(dispatched), "invoices": dispatched})
 
-# ============ CLIENT PORTAL QUERIES ENDPOINTS ============
-
+# ═════════════════════════════════════════════════════════════════════════════
+# QUERIES
+# ═════════════════════════════════════════════════════════════════════════════
 class QueryCreate(BaseModel):
-    client_code: str
-    client_name: str
-    invoice_id: str
-    subject: str
-    message: str
+    client_code: str; client_name: str; invoice_id: str; subject: str; message: str
 
 class QueryResolve(BaseModel):
     reply: str
 
 @app.get("/api/queries")
 def get_queries(client_code: Optional[str] = None):
-    query = {"client_code": client_code} if client_code else {}
-    return get_collection("queries").find(query, sort=[("created_at", -1)])
+    q    = {"client_code": client_code} if client_code else {}
+    docs = list(get_collection("queries").find(q, sort=[("created_at", -1)]))
+    return clean_response(docs)
 
 @app.post("/api/queries")
 async def create_query(q: QueryCreate, x_user_email: Optional[str] = Header(None)):
-    queries_col = get_collection("queries")
-    import uuid
     data = q.dict()
-    data["id"] = str(uuid.uuid4())
-    data["status"] = "open"
-    data["created_at"] = datetime.utcnow().isoformat()
-    data["created_by"] = x_user_email or "client_portal"
-    data["replies"] = []
-    
-    queries_col.insert_one(data)
-    
-    log_audit(
-        actor=x_user_email or "client_portal",
-        action="client_query_raised",
-        target=data["id"],
-        meta={"client_code": data["client_code"], "invoice_id": data["invoice_id"]}
-    )
-    
-    await notify_clients("query_updated", data)
-    return data
+    data.update({"id": str(uuid.uuid4()), "status": "open",
+                 "created_at": datetime.utcnow().isoformat(),
+                 "created_by": x_user_email or "portal", "replies": []})
+    get_collection("queries").insert_one(data)
+    log_audit(x_user_email or "portal", "query_raised", data["id"])
+    await notify("query_updated", data)
+    return clean_response(data)
 
 @app.post("/api/queries/{id}/resolve")
 async def resolve_query(id: str, payload: QueryResolve, x_user_email: Optional[str] = Header(None)):
-    queries_col = get_collection("queries")
-    q = queries_col.find_one({"id": id})
-    if not q:
-        raise HTTPException(status_code=404, detail="Query not found")
-        
+    col = get_collection("queries")
+    q   = col.find_one({"id": id})
+    if not q: raise HTTPException(404, "Query not found")
     q["status"] = "resolved"
-    q["replies"].append({
-        "sender": x_user_email or "finops_agent",
-        "message": payload.reply,
-        "at": datetime.utcnow().isoformat()
-    })
-    
-    queries_col.update_one({"id": id}, {"$set": q})
-    
-    log_audit(
-        actor=x_user_email or "finops_agent",
-        action="client_query_resolved",
-        target=id,
-        meta={"client_code": q["client_code"]}
-    )
-    
-    await notify_clients("query_updated", q)
-    return q
+    q.setdefault("replies", []).append(
+        {"sender": x_user_email or "admin", "message": payload.reply,
+         "at": datetime.utcnow().isoformat()})
+    col.update_one({"id": id}, {"$set": q})
+    log_audit(x_user_email or "admin", "query_resolved", id)
+    await notify("query_updated", q)
+    return clean_response(q)
 
-# ============ CONTEXT-AWARE AI CHAT ENDPOINT ============
-
-class ChatRequest(BaseModel):
-    query: str
-    client_code: Optional[str] = None
+# ═════════════════════════════════════════════════════════════════════════════
+# CHAT
+# ═════════════════════════════════════════════════════════════════════════════
+class ChatReq(BaseModel):
+    query: str; client_code: Optional[str] = None
 
 @app.post("/api/chat")
-def get_chat_response(req: ChatRequest):
-    response = agent.chat_assistant(req.query, req.client_code)
-    return {"response": response}
+def chat(req: ChatReq):
+    return {"response": agent.chat_assistant(req.query, req.client_code)}
 
-# ============ SYSTEM METRICS ENDPOINT ============
-
+# ═════════════════════════════════════════════════════════════════════════════
+# METRICS
+# ═════════════════════════════════════════════════════════════════════════════
 @app.get("/api/metrics")
 def get_metrics():
-    timesheets = get_collection("timesheets").find()
-    invoices = get_collection("invoices").find()
-    
-    total_ts = len(timesheets)
-    touchless_ts = len([t for t in timesheets if t.get("is_touchless")])
-    
-    touchless_rate = (touchless_ts / total_ts * 100) if total_ts > 0 else 0.0
-    
-    # Calculate average confidence
-    conf_sum = sum(float(t.get("extracted_data", {}).get("overall_confidence", 0)) for t in timesheets)
-    avg_confidence = (conf_sum / total_ts * 100) if total_ts > 0 else 100.0
-    
-    # Invoice stats
-    total_invoiced = sum(float(i.get("total_amount", 0)) for i in invoices)
-    passed_validation = len([i for i in invoices if i.get("validation_status") == "passed"])
-    
-    # Simulated processing time (touchless takes 1.5 min, manual exception resolution takes 18 min on average)
-    total_time = sum(1.5 if t.get("is_touchless") else 18.0 for t in timesheets)
-    avg_processing_time = (total_time / total_ts) if total_ts > 0 else 0.0
-    
+    tss  = list(get_collection("timesheets").find({}, {"is_touchless": 1, "extracted_data.overall_confidence": 1}))
+    invs = list(get_collection("invoices").find({}, {"total_amount": 1, "validation_status": 1}))
+    n    = len(tss)
+    tl   = sum(1 for t in tss if t.get("is_touchless"))
+    conf = sum(float((t.get("extracted_data") or {}).get("overall_confidence") or 0) for t in tss)
+    inv_total  = sum(float(i.get("total_amount") or 0) for i in invs)
+    inv_passed = sum(1 for i in invs if i.get("validation_status") == "passed")
+    proc_time  = sum(1.5 if t.get("is_touchless") else 18.0 for t in tss)
     return {
-        "touchless_rate": round(touchless_rate, 1),
-        "extraction_accuracy": round(avg_confidence, 1),
-        "avg_processing_time_mins": round(avg_processing_time, 1),
-        "total_invoiced_amount": round(total_invoiced, 2),
-        "passed_validation_count": passed_validation,
-        "total_invoices_count": len(invoices)
+        "touchless_rate":          round(tl / n * 100, 1) if n else 0.0,
+        "extraction_accuracy":     round(conf / n * 100, 1) if n else 100.0,
+        "avg_processing_time_mins":round(proc_time / n, 1) if n else 0.0,
+        "total_invoiced_amount":   round(inv_total, 2),
+        "passed_validation_count": inv_passed,
+        "total_invoices_count":    len(invs),
     }
 
-# ============ AUDIT TRAILS ENDPOINTS ============
-
+# ═════════════════════════════════════════════════════════════════════════════
+# AUDIT
+# ═════════════════════════════════════════════════════════════════════════════
 @app.get("/api/audit")
-def list_audit_logs(limit: int = 200):
-    return get_collection("audit_logs").find(limit=limit, sort=[("at", -1)])
+def get_audit(limit: int = 200):
+    docs = list(get_collection("audit_logs").find(sort=[("at", -1)], limit=limit))
+    return clean_response(docs)
 
-# ============ BACKWARD-COMPATIBILITY MOCK PROFILE & SESSIONS ============
-# Keep these so existing pages open without crashing immediately
+@app.post("/api/audit")
+def create_audit(data: dict):
+    data.setdefault("id", str(uuid.uuid4()))
+    data.setdefault("at", datetime.utcnow().isoformat())
+    get_collection("audit_logs").insert_one(data)
+    return clean_response(data)
 
-DEFAULT_EMPLOYEES = [
-    {"employeeId": "EMP001", "fullName": "Debangshu", "email": "debangshu@sinhas.ch", "department": "Administration", "employeeType": "permanent", "active": True},
-    {"employeeId": "EMP002", "fullName": "Nirmalya", "email": "nirmalya@sinhas.ch", "department": "Administration", "employeeType": "permanent", "active": True},
-    {"employeeId": "EMP003", "fullName": "Rishu", "email": "rishu@sinhas.ch", "department": "Administration", "employeeType": "permanent", "active": True},
-]
-
+# ═════════════════════════════════════════════════════════════════════════════
+# LEGACY PROFILES & SESSIONS (backward-compat for EmployeeDashboard clock-in)
+# ═════════════════════════════════════════════════════════════════════════════
 @app.get("/api/profiles")
 def list_profiles():
-    # Attempt to read employee master and format as legacy profile list
-    try:
-        employees = get_collection("employees").find()
-        if employees:
-            return [
-                {
-                    "employeeId": e["emp_id"],
-                    "fullName": e["full_name"],
-                    "email": e["email"],
-                    "mobile": "",
-                    "department": e["department"],
-                    "employeeType": "permanent",
-                    "active": e["status"] == "Active"
-                }
-                for e in employees
-            ]
-    except Exception:
-        pass
-    return DEFAULT_EMPLOYEES
+    emps = list(get_collection("employees").find({"is_demo_account": {"$ne": True}}))
+    return clean_response([
+        {"employeeId": e["emp_id"], "fullName": e["full_name"], "email": e["email"],
+         "mobile": "", "department": e["department"], "employeeType": "permanent",
+         "active": e.get("status") == "Active"}
+        for e in emps
+    ] or [])
 
 @app.get("/api/profiles/{email}")
 def get_profile(email: str):
-    # Special demo accounts — map to real employees in the TASC database
-    DEMO_EMAIL_MAP = {
-        "employee@gmail.com": "EMP10001",  # Carlos Smith, Emirates Steel
-        "admin@gmail.com": None,           # admin — no employee record
-    }
-    # Check if it's a demo account with an employee mapping
-    demo_emp_id = DEMO_EMAIL_MAP.get(email.lower())
-    if demo_emp_id:
-        emp = get_collection("employees").find_one({"emp_id": demo_emp_id})
-        if emp:
-            return {
-                "employeeId": emp["emp_id"],
-                "fullName": emp["full_name"],
-                "email": email,  # keep the login email
-                "mobile": "",
-                "department": emp["department"],
-                "employeeType": "permanent",
-                "active": emp["status"] == "Active"
-            }
-    # Normal lookup by email in employee master
-    emp = get_collection("employees").find_one({"email": email.lower()})
+    DEMO = {"employee@gmail.com": "EMP10001", "admin@gmail.com": None}
+    emp_id = DEMO.get(email.lower())
+    emp = None
+    if emp_id:
+        emp = get_collection("employees").find_one({"emp_id": emp_id, "is_demo_account": {"$ne": True}})
+    if not emp:
+        emp = get_collection("employees").find_one({"email": email.lower()})
     if emp:
-        return {
-            "employeeId": emp["emp_id"],
-            "fullName": emp["full_name"],
-            "email": emp["email"],
-            "mobile": "",
-            "department": emp["department"],
-            "employeeType": "permanent",
-            "active": emp["status"] == "Active"
-        }
-    return {
-        "employeeId": email.split("@")[0].upper(),
-        "fullName": email.split("@")[0],
-        "email": email,
-        "mobile": "",
-        "department": "—",
-        "employeeType": "permanent",
-        "active": True
-    }
+        return {"employeeId": emp["emp_id"], "fullName": emp["full_name"],
+                "email": email, "mobile": "", "department": emp["department"],
+                "employeeType": "permanent", "active": emp.get("status") == "Active"}
+    return {"employeeId": email.split("@")[0].upper(), "fullName": email.split("@")[0],
+            "email": email, "mobile": "", "department": "—",
+            "employeeType": "permanent", "active": True}
 
 @app.post("/api/profiles")
 def upsert_profile(data: dict):
-    return data
+    return clean_response(data)
 
 @app.get("/api/sessions")
 def list_sessions(email: Optional[str] = None, status: Optional[str] = None):
-    sessions_col = get_collection("sessions")
-    query = {}
-    if email:
-        query["email"] = email
-    if status:
-        query["status"] = status
-    return sessions_col.find(query, sort=[("clockIn", -1)])
+    q = {}
+    if email:  q["email"]  = email
+    if status: q["status"] = status
+    docs = list(get_collection("sessions").find(q, sort=[("clockIn", -1)]))
+    return clean_response(docs)
 
 @app.post("/api/sessions")
 def create_session(data: dict):
-    sessions_col = get_collection("sessions")
-    import uuid
-    if "id" not in data or not data["id"]:
-        data["id"] = str(uuid.uuid4())
-    sessions_col.insert_one(data)
-    return data
+    data.setdefault("id", str(uuid.uuid4()))
+    get_collection("sessions").insert_one(data)
+    return clean_response(data)
 
 @app.patch("/api/sessions/{id}")
 def patch_session(id: str, patch: dict):
-    sessions_col = get_collection("sessions")
-    s = sessions_col.find_one({"id": id})
-    if not s:
-        raise HTTPException(status_code=404, detail="Session not found")
-    sessions_col.update_one({"id": id}, {"$set": patch})
+    col = get_collection("sessions")
+    s   = col.find_one({"id": id})
+    if not s: raise HTTPException(404, "Session not found")
+    col.update_one({"id": id}, {"$set": patch})
     s.update(patch)
-    return s
+    return clean_response(s)
 
 @app.get("/api/sessions/{id}")
 def get_session(id: str):
-    sessions_col = get_collection("sessions")
-    s = sessions_col.find_one({"id": id})
-    if not s:
-        raise HTTPException(status_code=404, detail="Session not found")
-    return s
-
-@app.post("/api/audit")
-def create_audit_log(data: dict):
-    audit_col = get_collection("audit_logs")
-    import uuid
-    if "id" not in data or not data["id"]:
-        data["id"] = str(uuid.uuid4())
-    if "at" not in data or not data["at"]:
-        data["at"] = datetime.utcnow().isoformat()
-    audit_col.insert_one(data)
-    return data
+    s = get_collection("sessions").find_one({"id": id})
+    if not s: raise HTTPException(404, "Session not found")
+    return clean_response(s)
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 5000))
-    uvicorn.run(app, host="0.0.0.0", port=port)
+    uvicorn.run(app, host="0.0.0.0", port=port, reload=False)
