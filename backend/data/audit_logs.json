@@ -54,5 +54,12 @@
     "id": "137kv6zd1z7mmqwl1pu3",
     "at": "2026-06-27T16:37:00.555Z",
     "_id": "35d486dc-6509-415d-8711-16a17f9ca764"
+  },
+  {
+    "actor": "admin@gmail.com",
+    "action": "auth.signin",
+    "id": "hppab8vq91mqwl7h2i",
+    "at": "2026-06-27T16:41:29.130Z",
+    "_id": "33bbaddf-1ec1-47c2-9882-0dccc939c785"
   }
 ]
