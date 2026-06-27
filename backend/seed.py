@@ -82,6 +82,47 @@ def seed_db():
     employees_col.insert_many(employees_list)
     print(f"Seeded {len(employees_list)} employees.")
 
+    # ChromaDB Vector Store Ingestion
+    try:
+        import chromadb
+        print("Initializing ChromaDB for Vector RAG...")
+        chroma_client = chromadb.PersistentClient(path="./chroma_db")
+        # Try to get or create the collection for TIA Knowledge
+        knowledge_col = chroma_client.get_or_create_collection(name="tia_knowledge")
+        
+        # Clear existing data if any (simplest way is to just delete and recreate)
+        try:
+            chroma_client.delete_collection("tia_knowledge")
+            knowledge_col = chroma_client.create_collection(name="tia_knowledge")
+        except:
+            pass
+
+        print(f"Ingesting {len(employees_list)} employees into ChromaDB...")
+        documents = []
+        metadatas = []
+        ids = []
+        
+        for emp in employees_list:
+            # Create a rich text document that the BERT QA model can extract from
+            doc = f"Employee Profile: {emp['full_name']} (ID: {emp['emp_id']}) works as a {emp['job_title']} in {emp['department']}. " \
+                  f"They belong to client {emp['client_name']} ({emp['client_code']}). " \
+                  f"Their basic salary is {emp['basic']}, total CTC is {emp['total_ctc']}."
+            
+            documents.append(doc)
+            metadatas.append({"emp_id": emp["emp_id"], "type": "employee_profile"})
+            ids.append(f"emp_{emp['emp_id']}")
+
+        # Batch insert into ChromaDB
+        if documents:
+            knowledge_col.add(
+                documents=documents,
+                metadatas=metadatas,
+                ids=ids
+            )
+        print("ChromaDB vector ingestion complete.")
+    except Exception as e:
+        print(f"Error seeding ChromaDB: {e}")
+
     # 3. Payroll June 2026 Reference
     payroll_df = xl.parse("Payroll_June2026")
     payroll_ref_col = get_collection("payroll_reference")

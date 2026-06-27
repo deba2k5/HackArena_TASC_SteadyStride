@@ -645,8 +645,36 @@ def chat_assistant(query: str, client_code: str = None) -> str:
     - Total Generated Invoices: {len(invoices)} (Passed: {passed_validation}, Failed: {failed_validation})
     - Total Invoiced Value: {total_invoiced:.2f} AED
     """
-    
-    # Conversational fallback via rule-based logic (since we replaced Gemini with local BERT)
+    # ---------------------------------------------------------
+    # RAG PIPELINE: ChromaDB + Local BERT QA
+    # ---------------------------------------------------------
+    try:
+        import chromadb
+        from transformers import pipeline
+
+        chroma_client = chromadb.PersistentClient(path="./chroma_db")
+        knowledge_col = chroma_client.get_collection(name="tia_knowledge")
+
+        # 1. Retrieve the most relevant context using Vector Search
+        results = knowledge_col.query(
+            query_texts=[query],
+            n_results=1
+        )
+        
+        if results and results['documents'] and results['documents'][0]:
+            retrieved_context = results['documents'][0][0]
+            
+            # 2. Extract answer using BERT QA Pipeline
+            # Note: We re-use roberta-base-squad2 here. In a real app, load it globally.
+            qa_pipeline = pipeline("question-answering", model="deepset/roberta-base-squad2")
+            qa_res = qa_pipeline(question=query, context=retrieved_context)
+            
+            if qa_res['score'] > 0.1:
+                return f"**RAG Knowledge:** {qa_res['answer']}\n\n*Source Context:* {retrieved_context}"
+    except Exception as e:
+        print(f"RAG ChromaDB Pipeline Error: {e}")
+
+    # Fallback to simple rule-based if RAG fails or has no confident answer
     q_lower = query.lower()
     
     if "status" in q_lower or "summary" in q_lower or "overview" in q_lower:

@@ -58,6 +58,30 @@ Finance handles the high-level metrics and the final outgoing billing.
 
 ---
 
+## 🧠 Agentic AI & RAG Pipeline
+
+The application eliminates third-party API wrappers entirely, relying on local Hugging Face Models for privacy and data compliance.
+
+### 1. The RAG Engine (ChromaDB + Sentence Transformers)
+When a user asks a natural language question in the Chat Assistant (e.g., "What is Aisha's basic salary?"):
+1. The user's query is embedded using a `sentence-transformers` model.
+2. We query **ChromaDB** (`tia_knowledge` collection), which was seeded with all employee and client metadata during initialization.
+3. ChromaDB returns the exact chunk of text containing the relevant employee's profile.
+
+### 2. The Extraction Agent (RoBERTa QA)
+Once the exact context is retrieved from ChromaDB, or when a raw timesheet is uploaded:
+1. We pass the context into a **Local BERT QA Pipeline** (`deepset/roberta-base-squad2`).
+2. The agent asks deterministic questions against the context (e.g., "What is the employee ID?").
+3. The extracted answers are structured into JSON and passed to the backend ERP system.
+
+### 3. Training Your Own Agent
+To fulfill the requirement of a fully custom-trained agent, we provide a fine-tuning script:
+- Run `python backend/train_bert.py`
+- This script uses the `transformers` Trainer API to fine-tune `distilbert-base-uncased` for Token Classification (NER) on synthetic timesheet data. 
+- It outputs the weights into a `local_bert_timesheet_model` folder, which you can load directly into the extraction pipeline.
+
+---
+
 ## ⚙️ Setup & Installation
 
 ### Prerequisites
