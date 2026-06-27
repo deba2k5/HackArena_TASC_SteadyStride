@@ -1,0 +1,29 @@
+--- Page 1 ---
+H A C K E R A R E N A  2 . 0- P R O B L E M  S T A T E M E N T  &  U S E  C A S E
+Touchless Invoice Agent
+Take any client's timesheet, in any format, all the way to a validated invoice in their inbox, with people stepping in only by exception.
+TH E  PR O B L E M TO D AY
+Invoicing TASC's contract staff is slow and manual. Every 
+client sends timesheets in a different way, and the 
+Financial Operations team re-keys each one, builds the 
+invoices, checks them by hand, and emails them out.
+Any format, any channel, including handwriting.
+Heavy re-keying and manual checking.
+Days to turn around, with no visibility for clients.
+H O W  I T W O R K S
+1 Capture   Collect timesheets from email, the client portal and the timesheet app.
+2 Understand   Read typed and handwritten entries, then merge into one upload-ready file.
+3 Generate   The TASC Smart Bot loads the payroll system and produces the invoices.
+4 Validate   Check each invoice against the client's business rules and flag exceptions.
+5 Deliver   Send in each client's preferred order and track approvals on one dashboard.
+W H A T  S U C C E S S  L O O K S  L I K E
+PRIMARY MEASURE S
+80%+
+of invoices completed start to finish with 
+zero human touch
+Within minutes
+from timesheet received to invoice sent, instead 
+of days
+99%+
+data accuracy, with low-confidence items 
+routed to a person

@@ -1,0 +1,222 @@
+[
+  {
+    "client_code": "CL001",
+    "client_name": "Emirates Steel Industries LLC",
+    "city": "Abu Dhabi",
+    "industry": "Construction",
+    "contact_email": "billing@test.com",
+    "status": "Active",
+    "input_channels": [
+      "email",
+      "portal",
+      "timesheet_app"
+    ],
+    "dispatch_rule": "spend_ascending",
+    "validation_profile": {
+      "max_ot_hours_limit": 15,
+      "allow_variance": true,
+      "max_salary_variance_pct": 5.0,
+      "require_signature": true
+    },
+    "_id": "ca5e40c0-bd3d-4bed-a9e8-d04c9cd83fa3",
+    "id": "ca5e40c0-bd3d-4bed-a9e8-d04c9cd83fa3"
+  },
+  {
+    "client_code": "CL002",
+    "client_name": "Emaar Properties PJSC",
+    "city": "Dubai",
+    "industry": "Real Estate",
+    "contact_email": "billing@test.com",
+    "status": "Active",
+    "input_channels": [
+      "email",
+      "portal",
+      "timesheet_app"
+    ],
+    "dispatch_rule": "spend_descending",
+    "validation_profile": {
+      "max_ot_hours_limit": 15,
+      "allow_variance": true,
+      "max_salary_variance_pct": 5.0,
+      "require_signature": true
+    },
+    "_id": "7d697078-8d29-4277-978f-3a897e91dce9",
+    "id": "7d697078-8d29-4277-978f-3a897e91dce9"
+  },
+  {
+    "client_code": "CL003",
+    "client_name": "Dubai Airports FZE",
+    "city": "Dubai",
+    "industry": "Aviation",
+    "contact_email": "billing@test.com",
+    "status": "Active",
+    "input_channels": [
+      "email",
+      "portal",
+      "timesheet_app"
+    ],
+    "dispatch_rule": "spend_ascending",
+    "validation_profile": {
+      "max_ot_hours_limit": 15,
+      "allow_variance": true,
+      "max_salary_variance_pct": 5.0,
+      "require_signature": false
+    },
+    "_id": "847d2bc5-f92b-4468-aebc-34252beb72ca",
+    "id": "847d2bc5-f92b-4468-aebc-34252beb72ca"
+  },
+  {
+    "client_code": "CL004",
+    "client_name": "ADNOC Distribution PJSC",
+    "city": "Abu Dhabi",
+    "industry": "Oil & Gas",
+    "contact_email": "billing@test.com",
+    "status": "Active",
+    "input_channels": [
+      "email",
+      "portal",
+      "timesheet_app"
+    ],
+    "dispatch_rule": "spend_descending",
+    "validation_profile": {
+      "max_ot_hours_limit": 15,
+      "allow_variance": true,
+      "max_salary_variance_pct": 5.0,
+      "require_signature": true
+    },
+    "_id": "057c00b8-496a-4520-94fd-48872c29ce73",
+    "id": "057c00b8-496a-4520-94fd-48872c29ce73"
+  },
+  {
+    "client_code": "CL005",
+    "client_name": "Majid Al Futtaim Retail LLC",
+    "city": "Dubai",
+    "industry": "Retail",
+    "contact_email": "billing@test.com",
+    "status": "Active",
+    "input_channels": [
+      "email",
+      "portal",
+      "timesheet_app"
+    ],
+    "dispatch_rule": "spend_ascending",
+    "validation_profile": {
+      "max_ot_hours_limit": 5,
+      "allow_variance": true,
+      "max_salary_variance_pct": 5.0,
+      "require_signature": false
+    },
+    "_id": "692ae28d-a748-480b-bc4a-2e5138e03eae",
+    "id": "692ae28d-a748-480b-bc4a-2e5138e03eae"
+  },
+  {
+    "client_code": "CL006",
+    "client_name": "Abu Dhabi Commercial Bank PJSC",
+    "city": "Abu Dhabi",
+    "industry": "Banking",
+    "contact_email": "billing@test.com",
+    "status": "Active",
+    "input_channels": [
+      "email",
+      "portal",
+      "timesheet_app"
+    ],
+    "dispatch_rule": "spend_descending",
+    "validation_profile": {
+      "max_ot_hours_limit": 15,
+      "allow_variance": true,
+      "max_salary_variance_pct": 5.0,
+      "require_signature": false
+    },
+    "_id": "55a8a779-08f6-46c3-8f8c-fea75e49cd16",
+    "id": "55a8a779-08f6-46c3-8f8c-fea75e49cd16"
+  },
+  {
+    "client_code": "CL007",
+    "client_name": "DP World FZE",
+    "city": "Dubai",
+    "industry": "Logistics",
+    "contact_email": "billing@test.com",
+    "status": "Active",
+    "input_channels": [
+      "email",
+      "portal",
+      "timesheet_app"
+    ],
+    "dispatch_rule": "spend_descending",
+    "validation_profile": {
+      "max_ot_hours_limit": 15,
+      "allow_variance": true,
+      "max_salary_variance_pct": 5.0,
+      "require_signature": false
+    },
+    "_id": "9572e963-87bb-436c-b02e-bfe73d430098",
+    "id": "9572e963-87bb-436c-b02e-bfe73d430098"
+  },
+  {
+    "client_code": "CL008",
+    "client_name": "Etihad Airways PJSC",
+    "city": "Abu Dhabi",
+    "industry": "Aviation",
+    "contact_email": "billing@test.com",
+    "status": "Active",
+    "input_channels": [
+      "email",
+      "portal",
+      "timesheet_app"
+    ],
+    "dispatch_rule": "spend_descending",
+    "validation_profile": {
+      "max_ot_hours_limit": 15,
+      "allow_variance": true,
+      "max_salary_variance_pct": 5.0,
+      "require_signature": false
+    },
+    "_id": "f95d55aa-8d76-4ad8-a36b-d4b87d32cd70",
+    "id": "f95d55aa-8d76-4ad8-a36b-d4b87d32cd70"
+  },
+  {
+    "client_code": "CL009",
+    "client_name": "Aldar Properties PJSC",
+    "city": "Abu Dhabi",
+    "industry": "Real Estate",
+    "contact_email": "billing@test.com",
+    "status": "Active",
+    "input_channels": [
+      "email",
+      "portal",
+      "timesheet_app"
+    ],
+    "dispatch_rule": "spend_descending",
+    "validation_profile": {
+      "max_ot_hours_limit": 15,
+      "allow_variance": true,
+      "max_salary_variance_pct": 5.0,
+      "require_signature": false
+    },
+    "_id": "c9f5cc64-e0e2-4c8d-8dde-9fa794956617",
+    "id": "c9f5cc64-e0e2-4c8d-8dde-9fa794956617"
+  },
+  {
+    "client_code": "CL010",
+    "client_name": "Transguard Group LLC",
+    "city": "Dubai",
+    "industry": "Security",
+    "contact_email": "billing@test.com",
+    "status": "Active",
+    "input_channels": [
+      "email",
+      "portal",
+      "timesheet_app"
+    ],
+    "dispatch_rule": "spend_descending",
+    "validation_profile": {
+      "max_ot_hours_limit": 15,
+      "allow_variance": true,
+      "max_salary_variance_pct": 5.0,
+      "require_signature": false
+    },
+    "_id": "94621f5e-5353-4827-8c03-05af29827d27",
+    "id": "94621f5e-5353-4827-8c03-05af29827d27"
+  }
+]

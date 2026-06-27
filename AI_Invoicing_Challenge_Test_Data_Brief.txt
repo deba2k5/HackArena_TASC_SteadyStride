@@ -1,0 +1,38 @@
+AI Invoicing Challenge
+Test Data Creation Brief
+Source database: TASC_Sample_Database_v2_1.xlsx
+
+Context
+A firm receives monthly timesheets for its outsourced staff in seven different ways, from a clean spreadsheet to a handwritten scan. We provide the database only. Teams create their own sample and test data from it. This brief guides that creation.
+The database
+Four sheets. Use the first three to build your inputs.
+
+Across the 200 staff, only Emp ID is unique. 25 names repeat and emails repeat with them, so you can build genuinely ambiguous inputs. See the last table for ready made examples.
+Creating your test data
+Start from real rows in the Employees sheet so every input points at a real record.
+Add the timesheet figures yourself: working days (20 to 26 in June), and where the case needs it, overtime, leave, or reimbursements.
+For each case, include clean inputs, ambiguous inputs, and some that should not match at all.
+Match the file format to the case: email body, PDF or image, or Excel.
+The seven cases
+Ready made ambiguity
+These names already repeat in the database. Reuse them to build ambiguous inputs.
+
+Emails follow first.last@test.com, so shared names also share an email.
+Sheet | Rows | Contents
+Customers | 10 | Client Code (CL001 to CL010), Client Name, City, Industry, Contact Email, Status.
+Employees | 200 | Twenty per client. Emp ID, Full Name, Email, Client Code, Client Name, Job Title, Department, Nationality, Date of Joining, IBAN, salary parts (Basic, Housing, Transport, Food, Phone, Total CTC).
+Payroll_June2026 | 200 | June 2026 pay run. Salary parts, Gross, OT, Deductions, Net Pay, Currency (AED), Working Days.
+TestCases | 7 | The seven cases and how to generate each. Definitions only.
+Case | Input format | Provided in the input | How to generate
+1 | Email, payout request | Name, Client Name, period, total. No Emp ID. | Take a row, keep name and client, drop the Emp ID.
+2 | Email from the employee | Emp ID and days worked. No client. | Use empNNNNN@test.com as sender and state the Emp ID in the body.
+3 | Email, full month from client | Client name and code, then a list of names with days. No Emp IDs. | Pick a client, list several of its employees by name with days.
+4 | Handwritten PDF or image | Names, days, hours, signature, client stamp, all handwritten. | Write names and days on a form, export to PDF or image, vary legibility.
+5 | Excel, punch in and out | Client, Emp ID, Name, daily punch times, leave as free text comments and mixed codes. | Build an xlsx with punch columns and a comments column using mixed leave codes (AL, A/L, Annual, sick).
+6 | Email, well structured | Emp ID, leave taken, reimbursement amounts with reasons, month. | Use a real Emp ID and add two or three reimbursement lines with amounts and reasons.
+7 | Excel, complete | Emp ID, Name, Client Code, Client Name, Working Days, all matching. | Copy real rows from Employees and Payroll with no changes.
+Name | Emp IDs | Clients | Note
+Aisha Al Zaabi | EMP10058, EMP10072, EMP10077 | CL003, CL004 (x2) | Two share one client
+Fatima Khan | EMP10083, EMP10093 | CL005 (x2) | Same client
+Ravi Menon | EMP10070, EMP10136, EMP10157 | CL004, CL007, CL008 | Across clients
+Carlos Smith | EMP10001 | CL001 | Unique, clean control

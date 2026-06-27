@@ -1,0 +1,162 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Sinha's Group — high-contrast SaaS portal. Swiss red on warm off-white. */
+@layer base {
+  :root {
+    --background: 36 21% 96%;            /* #f7f5f2 warm paper */
+    --foreground: 240 3% 6%;             /* #0f0f10 near-black */
+
+    --card: 0 0% 100%;
+    --card-foreground: 240 3% 6%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 3% 6%;
+
+    --primary: 0 72% 51%;                /* #dc2626 */
+    --primary-foreground: 0 0% 100%;
+    --primary-soft: 0 86% 96%;
+    --primary-glow: 351 95% 71%;         /* #fb7185 */
+
+    --secondary: 36 14% 92%;
+    --secondary-foreground: 240 3% 10%;
+
+    --muted: 36 14% 92%;
+    --muted-foreground: 240 4% 40%;
+
+    --accent: 351 95% 71%;
+    --accent-foreground: 240 3% 6%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 152 60% 38%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 36 96% 50%;
+    --warning-foreground: 0 0% 100%;
+
+    --info: 210 90% 50%;
+    --info-foreground: 0 0% 100%;
+
+    --border: 36 10% 88%;
+    --input: 36 10% 88%;
+    --ring: 0 72% 51%;
+
+    --radius: 0.85rem;
+
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 240 4% 20%;
+    --sidebar-primary: 0 72% 51%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 36 14% 94%;
+    --sidebar-accent-foreground: 240 3% 10%;
+    --sidebar-border: 36 10% 88%;
+    --sidebar-ring: 0 72% 51%;
+
+    --gradient-primary: linear-gradient(135deg, hsl(0 72% 51%) 0%, hsl(351 95% 71%) 100%);
+    --gradient-hero: radial-gradient(900px 500px at 100% 0%, hsl(0 72% 51% / 0.30), transparent 60%),
+                     radial-gradient(700px 500px at 0% 100%, hsl(351 95% 71% / 0.18), transparent 55%),
+                     linear-gradient(135deg, hsl(240 4% 4%) 0%, hsl(240 6% 8%) 100%);
+    --gradient-surface: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(36 21% 96%) 100%);
+    --shadow-card: 0 1px 2px hsl(240 3% 6% / 0.04), 0 12px 32px -16px hsl(240 3% 6% / 0.12);
+    --shadow-elevated: 0 18px 40px -16px hsl(0 72% 51% / 0.35);
+    --shadow-soft: 0 8px 24px -12px hsl(240 3% 6% / 0.10);
+  }
+
+  .dark {
+    --background: 240 6% 6%;
+    --foreground: 36 21% 96%;
+    --card: 240 5% 9%;
+    --card-foreground: 36 21% 96%;
+    --popover: 240 5% 9%;
+    --popover-foreground: 36 21% 96%;
+    --primary: 0 78% 58%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 351 95% 71%;
+    --secondary: 240 5% 14%;
+    --secondary-foreground: 36 21% 96%;
+    --muted: 240 5% 14%;
+    --muted-foreground: 240 4% 65%;
+    --accent: 351 95% 71%;
+    --accent-foreground: 240 3% 6%;
+    --destructive: 0 75% 55%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 240 5% 18%;
+    --input: 240 5% 18%;
+    --ring: 0 78% 58%;
+    --sidebar-background: 240 5% 9%;
+    --sidebar-foreground: 36 20% 88%;
+    --sidebar-primary: 0 78% 58%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 5% 14%;
+    --sidebar-accent-foreground: 36 20% 92%;
+    --sidebar-border: 240 5% 18%;
+    --sidebar-ring: 0 78% 58%;
+  }
+}
+
+@layer base {
+  * { @apply border-border; }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+    font-feature-settings: "ss01", "cv11";
+  }
+  h1, h2, h3, h4, h5 {
+    font-family: "Space Grotesk", "DM Sans", ui-sans-serif, sans-serif;
+    @apply tracking-tight;
+  }
+}
+
+@layer utilities {
+  .font-display { font-family: "Space Grotesk", "DM Sans", ui-sans-serif, sans-serif; }
+  .bg-gradient-primary { background-image: var(--gradient-primary); }
+  .bg-gradient-hero { background-image: var(--gradient-hero); }
+  .bg-gradient-surface { background-image: var(--gradient-surface); }
+  .shadow-card { box-shadow: var(--shadow-card); }
+  .shadow-elevated { box-shadow: var(--shadow-elevated); }
+  .shadow-soft { box-shadow: var(--shadow-soft); }
+  .hover-lift {
+    transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+  }
+  .hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 16px 36px -18px hsl(240 3% 6% / 0.22);
+    border-color: hsl(var(--primary) / 0.35);
+  }
+  .glass {
+    background: hsl(0 0% 100% / 0.7);
+    backdrop-filter: saturate(180%) blur(14px);
+    -webkit-backdrop-filter: saturate(180%) blur(14px);
+  }
+  .text-gradient {
+    background-image: var(--gradient-primary);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .ring-brand { box-shadow: 0 0 0 4px hsl(var(--primary) / 0.12); }
+  .dot-grid {
+    background-image: radial-gradient(hsl(0 0% 100% / 0.08) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+  .dot-grid-light {
+    background-image: radial-gradient(hsl(var(--foreground) / 0.06) 1px, transparent 1px);
+    background-size: 22px 22px;
+  }
+  .page-header {
+    @apply space-y-1 pb-2;
+  }
+  .page-header h1 {
+    @apply text-2xl sm:text-3xl font-semibold tracking-tight;
+  }
+  .page-header p {
+    @apply text-sm text-muted-foreground;
+  }
+}
+
+/* Leaflet container */
+.leaflet-container { width: 100%; height: 100%; border-radius: 0.75rem; }
+

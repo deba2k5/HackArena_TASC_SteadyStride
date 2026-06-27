@@ -1,0 +1,25 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "app.py",
+      "use": "@vercel/python"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "app.py"
+    }
+  ],
+  "env": {
+    "MONGODB_URI": "mongodb+srv://sinhasapp:sinhas123@sinhasapp.mhknlyr.mongodb.net/?appName=sinhasapp",
+    "MONGODB_DB": "sinhasapp",
+    "GOOGLE_DRIVE_FOLDER_ID": "1i5eJ2S3LVEsnEYI8gpljk-E0eoq6rCSb",
+    "FLASK_ENV": "production",
+    "ADMIN_EMAILS": "admin@sinhas.ch,debangshu@sinhas.ch,nirmalya@sinhas.ch,rishu@sinhas.ch,rajeev@sinhas.ch",
+    "SECRET_KEY": "sinhas-workforce-vision-secret-key-2026",
+    "CORS_ORIGINS": "https://sinhas-frontend1.vercel.app,http://localhost:3000,http://localhost:8080,http://192.168.1.34:8080",
+    "FRONTEND_URL": "https://sinhas-frontend1.vercel.app"
+  }
+}

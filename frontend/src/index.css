@@ -1,0 +1,102 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Swiss-inspired light theme — red, white, neutral grays. */
+@layer base {
+  :root {
+    --background: 0 0% 99%;
+    --foreground: 220 20% 12%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 220 20% 12%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 20% 12%;
+
+    --primary: 354 78% 49%;          /* Swiss red */
+    --primary-foreground: 0 0% 100%;
+    --primary-soft: 354 90% 96%;
+
+    --secondary: 220 15% 96%;
+    --secondary-foreground: 220 20% 18%;
+
+    --muted: 220 15% 96%;
+    --muted-foreground: 220 10% 45%;
+
+    --accent: 354 78% 49%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 75% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 152 60% 38%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 36 96% 50%;
+    --warning-foreground: 0 0% 100%;
+
+    --info: 210 90% 50%;
+    --info-foreground: 0 0% 100%;
+
+    --border: 220 14% 90%;
+    --input: 220 14% 90%;
+    --ring: 354 78% 49%;
+
+    --radius: 0.6rem;
+
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 220 20% 25%;
+    --sidebar-primary: 354 78% 49%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 15% 96%;
+    --sidebar-accent-foreground: 220 20% 15%;
+    --sidebar-border: 220 14% 90%;
+    --sidebar-ring: 354 78% 49%;
+  }
+
+  .dark {
+    --background: 220 25% 8%;
+    --foreground: 0 0% 96%;
+    --card: 220 22% 12%;
+    --card-foreground: 0 0% 96%;
+    --popover: 220 22% 12%;
+    --popover-foreground: 0 0% 96%;
+    --primary: 354 78% 55%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 18% 18%;
+    --secondary-foreground: 0 0% 96%;
+    --muted: 220 18% 18%;
+    --muted-foreground: 220 8% 65%;
+    --accent: 354 78% 55%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 75% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 152 60% 45%;
+    --success-foreground: 0 0% 100%;
+    --warning: 36 96% 55%;
+    --warning-foreground: 0 0% 10%;
+    --info: 210 90% 60%;
+    --info-foreground: 0 0% 100%;
+    --border: 220 18% 22%;
+    --input: 220 18% 22%;
+    --ring: 354 78% 55%;
+    --sidebar-background: 220 22% 12%;
+    --sidebar-foreground: 0 0% 90%;
+    --sidebar-primary: 354 78% 55%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 18% 18%;
+    --sidebar-accent-foreground: 0 0% 90%;
+    --sidebar-border: 220 18% 22%;
+    --sidebar-ring: 354 78% 55%;
+  }
+}
+
+@layer base {
+  * { @apply border-border; }
+  body { @apply bg-background text-foreground antialiased; font-feature-settings: "cv11","ss01"; }
+  h1,h2,h3,h4 { @apply tracking-tight; }
+}
+
+/* Leaflet container */
+.leaflet-container { width: 100%; height: 100%; border-radius: 0.5rem; }

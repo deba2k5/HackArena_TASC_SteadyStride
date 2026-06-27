@@ -1,0 +1,14 @@
+[
+  {
+    "actor": "system",
+    "action": "database_seed",
+    "target": "all",
+    "at": "2026-06-27T16:09:58.462460",
+    "meta": {
+      "customers_seeded": 10,
+      "employees_seeded": 200
+    },
+    "_id": "3bd84ca1-6dd9-4a00-9fd4-e009bb537c52",
+    "id": "3bd84ca1-6dd9-4a00-9fd4-e009bb537c52"
+  }
+]
