@@ -5,7 +5,6 @@
 ---
 
 ## What It Does
-
 TIA (Touchless Invoice Agent) automates the full lifecycle of timesheet ingestion → invoice generation → payroll dispatch with zero manual intervention when confidence is high enough.
 
 **Employee** submits a timesheet (handwritten image, Excel, PDF, email text) → **AI pipeline** extracts employee data, working days, project codes, pay amounts → **Invoice generated** at AED 500/hr × 8 hrs/day → **Auto-dispatched** if confidence ≥ 90%.
